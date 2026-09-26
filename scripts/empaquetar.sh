@@ -1,0 +1,30 @@
+#!/bin/sh
+# Compila Mascota.app y la instala en ~/Applications.
+set -eu
+RAIZ=$(cd "$(dirname "$0")/.." && pwd)
+cd "$RAIZ"
+swift build -c release
+APP="$RAIZ/.build/Mascota.app"
+rm -rf "$APP"
+mkdir -p "$APP/Contents/MacOS"
+cp .build/release/Mascota "$APP/Contents/MacOS/Mascota"
+cat > "$APP/Contents/Info.plist" <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>CFBundleIdentifier</key><string>dev.gcoder.mascota</string>
+  <key>CFBundleName</key><string>Mascota</string>
+  <key>CFBundleExecutable</key><string>Mascota</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleShortVersionString</key><string>0.1</string>
+  <key>LSMinimumSystemVersion</key><string>14.0</string>
+  <key>LSUIElement</key><true/>
+</dict></plist>
+EOF
+codesign --force --sign - "$APP"
+mkdir -p "$HOME/Applications"
+pkill -x Mascota 2>/dev/null || true
+rm -rf "$HOME/Applications/Mascota.app"
+cp -R "$APP" "$HOME/Applications/Mascota.app"
+open "$HOME/Applications/Mascota.app"
+echo "Mascota instalada en ~/Applications/Mascota.app"
