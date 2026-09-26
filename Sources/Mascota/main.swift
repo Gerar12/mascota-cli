@@ -1,0 +1,2 @@
+import MascotaCore
+print("mascota")
