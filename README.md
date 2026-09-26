@@ -1,0 +1,37 @@
+# Mascota CLI
+
+Mascota animada para macOS que muestra qué hacen **Claude Code** y **Codex CLI**: trabajando (laptop), pidiendo permiso (❓), terminó (saluda) o falló (ERROR). Vive en una ventana flotante que se arrastra y en la barra de menú.
+
+## Instalar
+
+```sh
+sh scripts/instalar-mascotas.sh    # copia las mascotas de ChatGPT.app a ~/.mascota/mascotas (uso personal)
+sh scripts/empaquetar.sh           # compila e instala ~/Applications/Mascota.app y la abre
+python3 scripts/instalar-hooks.py  # agrega el hook a ~/.claude/settings.json y ~/.codex/hooks.json (con respaldo)
+```
+
+Codex solo ejecuta hooks confiables: la primera vez, abre `codex` y aprueba los hooks nuevos de `pet-hook.sh` (o revísalos con `/hooks`).
+
+Desde el menú de la barra: mostrar/ocultar, sesiones activas, mascota de cada CLI y «Abrir al iniciar sesión».
+
+## Desinstalar
+
+```sh
+python3 scripts/instalar-hooks.py --desinstalar
+rm -rf ~/Applications/Mascota.app ~/.mascota
+```
+
+## Mascota propia
+
+Cualquier mascota con el formato de Codex v2 (`pet.json` + hoja de sprites de 1536×2288, celdas de 192×208) en `~/.codex/pets/<id>/` o `~/.mascota/mascotas/<id>/` aparece en el menú. Se pueden crear con la skill `hatch-pet` de Codex.
+
+## Cómo funciona
+
+`hooks/pet-hook.sh` escribe `~/.mascota/estado/<cli>-<sesión>.json` en cada evento; la app lo lee cada 0,5 s y muestra el estado más urgente (permiso > error > trabajando > terminó). Se oculta sola tras 3 min sin trabajo.
+
+## Desarrollo
+
+- `swift test`: lógica pura en `Sources/MascotaCore`.
+- `sh pruebas/*.sh`: pruebas del hook y los instaladores.
+- `Package.swift` necesita `swift-tools-version: 6.4`: con 6.0 y solo Command Line Tools, swift-testing no encuentra sus macros.
+- El disco de la Mac no distingue mayúsculas: `tests/` y `Tests/` son la misma carpeta. Por eso las pruebas de shell viven en `pruebas/`.
