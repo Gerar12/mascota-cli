@@ -45,7 +45,7 @@ def actualizar(cfg, cli, destino, quitar):
             grupos = conservados
         elif not any(es_nuestro(h, destino, cli) for g in grupos for h in g.get('hooks', [])):
             hook = {'type': 'command', 'command': f'/bin/sh {shlex.quote(str(destino))} {cli}',
-                    'timeout': 5}
+                    'timeout': 3 if evento == 'SessionEnd' else 5}
             if cli == 'claude':
                 hook['async'] = True
             grupo = {'hooks': [hook]}
