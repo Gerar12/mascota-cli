@@ -39,6 +39,16 @@ final class MenuMascota: NSObject, NSMenuDelegate {
         let raiz = NSMenuItem(title: "Mascota", action: nil, keyEquivalent: "")
         raiz.submenu = sub
         menu.addItem(raiz)
+        let tam = NSMenu()
+        for (nombre, ancho) in PanelMascota.tamanos {
+            let it = accion(nombre, #selector(elegirTamano(_:)))
+            it.representedObject = ancho
+            it.state = app.panel.anchoSprite == ancho ? .on : .off
+            tam.addItem(it)
+        }
+        let raizTam = NSMenuItem(title: "Tamaño", action: nil, keyEquivalent: "")
+        raizTam.submenu = tam
+        menu.addItem(raizTam)
         let login = accion("Abrir al iniciar sesión", #selector(alternarLogin))
         login.state = SMAppService.mainApp.status == .enabled ? .on : .off
         menu.addItem(login)
@@ -57,6 +67,11 @@ final class MenuMascota: NSObject, NSMenuDelegate {
     @objc private func elegirMascota(_ it: NSMenuItem) {
         guard let id = it.representedObject as? String else { return }
         app?.elegirMascota(id)
+    }
+
+    @objc private func elegirTamano(_ it: NSMenuItem) {
+        guard let ancho = it.representedObject as? CGFloat else { return }
+        app?.panel.cambiarTamano(ancho)
     }
 
     @objc private func alternarLogin() {
