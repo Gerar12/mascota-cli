@@ -22,3 +22,14 @@ while IFS= read -r ruta; do
     "$id" "$nombre" "$version" > "$DESTINO/$id/pet.json"
   echo "Instalada $nombre"
 done < "$TMP/mascotas"
+
+# Logos de Claude y Codex para el globo (se pintan como plantilla en la app).
+ICONOS="$(dirname "$DESTINO")/iconos"
+mkdir -p "$ICONOS"
+CLAUDE_ICONO="/Applications/Claude.app/Contents/Resources/TrayIconTemplate@3x.png"
+if [ -f "$CLAUDE_ICONO" ]; then cp -f "$CLAUDE_ICONO" "$ICONOS/claude.png" && echo "Logo de Claude listo"
+else echo "Sin Claude.app: el globo usará un ícono genérico para Claude" >&2; fi
+svg=$(grep -E '^/webview/assets/codex-new-[0-9a-f]+\.svg$' "$TMP/listado" | head -1 || true)
+if [ -n "$svg" ] && npx -y @electron/asar extract-file "$ASAR" "${svg#/}" 2>/dev/null && [ -f "$(basename "$svg")" ]; then
+  mv -f "$(basename "$svg")" "$ICONOS/codex.svg" && echo "Logo de Codex listo"
+else echo "No encontré el logo de Codex: el globo usará un ícono genérico" >&2; fi

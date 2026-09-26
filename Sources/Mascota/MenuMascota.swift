@@ -2,29 +2,21 @@ import AppKit
 import MascotaCore
 import ServiceManagement
 
-/// Ícono animado en la barra de menú y su menú.
+/// Menú que se abre al hacer clic en la mascota.
 @MainActor
-final class MenuBarra: NSObject, NSMenuDelegate {
-    private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+final class MenuMascota: NSObject, NSMenuDelegate {
+    let menu = NSMenu()
     weak var app: AppDelegate?
 
     override init() {
         super.init()
-        let menu = NSMenu()
         menu.delegate = self
-        item.menu = menu
-    }
-
-    func mostrarCuadro(_ imagen: CGImage?) {
-        guard let imagen else { return }
-        item.button?.image = NSImage(cgImage: imagen, size: NSSize(width: 17, height: 18))
     }
 
     func menuNeedsUpdate(_ menu: NSMenu) {
         guard let app else { return }
         menu.removeAllItems()
-        let visible = app.panel.isVisible
-        menu.addItem(accion(visible ? "Ocultar mascota" : "Mostrar mascota", #selector(alternarPanel)))
+        menu.addItem(accion("Ocultar mascota", #selector(ocultar)))
         menu.addItem(.separator())
 
         let ahora = Date()
@@ -37,18 +29,16 @@ final class MenuBarra: NSObject, NSMenuDelegate {
                                     action: nil, keyEquivalent: ""))
         }
         menu.addItem(.separator())
-        for cli in ["claude", "codex"] {
-            let sub = NSMenu()
-            for m in app.catalogo {
-                let it = accion(m.nombre, #selector(elegirMascota(_:)))
-                it.representedObject = [cli, m.id]
-                it.state = app.mascotaId(cli) == m.id ? .on : .off
-                sub.addItem(it)
-            }
-            let raiz = NSMenuItem(title: "Mascota de \(cli == "codex" ? "Codex" : "Claude")", action: nil, keyEquivalent: "")
-            raiz.submenu = sub
-            menu.addItem(raiz)
+        let sub = NSMenu()
+        for m in app.catalogo {
+            let it = accion(m.nombre, #selector(elegirMascota(_:)))
+            it.representedObject = m.id
+            it.state = app.mascotaId == m.id ? .on : .off
+            sub.addItem(it)
         }
+        let raiz = NSMenuItem(title: "Mascota", action: nil, keyEquivalent: "")
+        raiz.submenu = sub
+        menu.addItem(raiz)
         let login = accion("Abrir al iniciar sesión", #selector(alternarLogin))
         login.state = SMAppService.mainApp.status == .enabled ? .on : .off
         menu.addItem(login)
@@ -62,11 +52,11 @@ final class MenuBarra: NSObject, NSMenuDelegate {
         return it
     }
 
-    @objc private func alternarPanel() { app?.alternarPanelManual() }
+    @objc private func ocultar() { app?.ocultarManual() }
 
     @objc private func elegirMascota(_ it: NSMenuItem) {
-        guard let par = it.representedObject as? [String] else { return }
-        app?.elegirMascota(cli: par[0], id: par[1])
+        guard let id = it.representedObject as? String else { return }
+        app?.elegirMascota(id)
     }
 
     @objc private func alternarLogin() {

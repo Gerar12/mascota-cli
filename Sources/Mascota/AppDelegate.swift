@@ -4,7 +4,7 @@ import MascotaCore
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let panel = PanelMascota()
-    let menu = MenuBarra()
+    let menu = MenuMascota()
     private(set) var sesiones: [Sesion] = []
     private(set) var catalogo: [MascotaDef] = []
     private var hojas: [String: HojaSprites] = [:]
@@ -13,10 +13,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var ocultoManual = false
     private var ultimoSondeo = Date.distantPast
 
+    private let abierta = Date()
+    /// Al abrir la app se muestra unos segundos aunque no haya sesiones, para saber que está corriendo.
+    private func visibleAlAbrir(_ ahora: Date) -> Bool { ahora.timeIntervalSince(abierta) < 10 }
+
     private let raiz = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".mascota")
 
     func applicationDidFinishLaunching(_ n: Notification) {
         menu.app = self
+        panel.sprite.alHacerClic = { [weak self] evento in
+            guard let self else { return }
+            NSMenu.popUpContextMenu(self.menu.menu, with: evento, for: self.panel.sprite)
+        }
         catalogo = CatalogoMascotas.cargar(directorios: [
             raiz.appendingPathComponent("mascotas"),
             FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".codex/pets"),
@@ -24,24 +32,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Timer.scheduledTimer(withTimeInterval: 1.0 / 20, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.tick() }
         }
+        panel.orderFrontRegardless()
         tick()
     }
 
-    func mascotaId(_ cli: String) -> String {
-        UserDefaults.standard.string(forKey: "mascota.\(cli)") ?? "null-signal"
+    var mascotaId: String {
+        UserDefaults.standard.string(forKey: "mascota") ?? "null-signal"
     }
 
-    func elegirMascota(cli: String, id: String) {
-        UserDefaults.standard.set(id, forKey: "mascota.\(cli)")
+    func elegirMascota(_ id: String) {
+        UserDefaults.standard.set(id, forKey: "mascota")
     }
 
-    func alternarPanelManual() {
-        ocultoManual = panel.isVisible
-        if ocultoManual { panel.orderOut(nil) } else { panel.orderFrontRegardless() }
+    func ocultarManual() {
+        ocultoManual = true
+        panel.orderOut(nil)
     }
 
-    private func hoja(_ cli: String) -> HojaSprites? {
-        let id = mascotaId(cli)
+    /// Abrir la app de nuevo (Finder, Spotlight u `open`) vuelve a mostrar la mascota.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        ocultoManual = false
+        panel.orderFrontRegardless()
+        return false
+    }
+
+    private func hoja() -> HojaSprites? {
+        let id = mascotaId
         if let h = hojas[id] { return h }
         guard let def = catalogo.first(where: { $0.id == id }) ?? catalogo.first,
               let h = HojaSprites(url: def.hoja) else { return nil }
@@ -67,16 +83,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let desdeCambio = ahora.timeIntervalSince(cambio)
 
         let anim = Animaciones.para(estado: estado, desdeCambio: desdeCambio)
-        let cuadro = hoja(principal?.cli ?? "claude")?
+        let cuadro = hoja()?
             .celda(fila: anim.fila, columna: Animaciones.cuadro(anim, tiempo: desdeCambio))
         panel.mostrarCuadro(cuadro)
-        menu.mostrarCuadro(cuadro)
 
         let mostrarGlobo = principal != nil && (estado == .waiting || estado == .failed || desdeCambio < 6)
-        panel.mostrarGlobo(mostrarGlobo ? principal.map { Textos.globo($0, estado: estado!) } : nil)
+        panel.mostrarGlobo(mostrarGlobo ? Textos.chips(sesiones, ahora: ahora) : nil)
 
         let debe = Agregador.debeMostrarse(sesiones, ahora: ahora) && !ocultoManual
         if debe && !panel.isVisible { panel.orderFrontRegardless() }
-        if !debe && panel.isVisible && !ocultoManual { panel.orderOut(nil) }
+        if !debe && panel.isVisible && !ocultoManual && !visibleAlAbrir(ahora) { panel.orderOut(nil) }
     }
 }

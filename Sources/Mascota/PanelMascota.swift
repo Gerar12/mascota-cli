@@ -1,9 +1,31 @@
 import AppKit
+import MascotaCore
 
-/// Ventana flotante sin bordes con la mascota y un globo de texto encima.
+/// Vista de la mascota: arrastrar mueve la ventana; un clic sin arrastrar abre el menú.
+final class VistaSprite: NSView {
+    var alHacerClic: ((NSEvent) -> Void)?
+    private var arrastro = false
+
+    override var mouseDownCanMoveWindow: Bool { false }
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+    override func mouseDown(with event: NSEvent) { arrastro = false }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard !arrastro else { return }
+        arrastro = true
+        window?.performDrag(with: event)
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        if !arrastro { alHacerClic?(event) }
+    }
+}
+
+/// Ventana flotante sin bordes con la mascota y un globo de íconos encima.
 final class PanelMascota: NSPanel {
-    private let sprite = NSView()
-    private let globo = NSTextField(labelWithString: "")
+    let sprite = VistaSprite()
+    private let globo = GloboEstado()
     static let tamSprite = NSSize(width: 80, height: 87)
 
     init() {
@@ -14,7 +36,7 @@ final class PanelMascota: NSPanel {
         hasShadow = false
         level = .floating
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
-        isMovableByWindowBackground = true
+        isMovableByWindowBackground = false
         hidesOnDeactivate = false
 
         let fondo = NSView(frame: contentRect(forFrameRect: frame))
@@ -24,12 +46,6 @@ final class PanelMascota: NSPanel {
         sprite.frame = NSRect(x: (220 - Self.tamSprite.width) / 2, y: 0,
                               width: Self.tamSprite.width, height: Self.tamSprite.height)
 
-        globo.font = .systemFont(ofSize: 11, weight: .medium)
-        globo.textColor = .white
-        globo.alignment = .center
-        globo.wantsLayer = true
-        globo.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.75).cgColor
-        globo.layer?.cornerRadius = 8
         globo.isHidden = true
 
         fondo.addSubview(sprite)
@@ -46,12 +62,11 @@ final class PanelMascota: NSPanel {
 
     func mostrarCuadro(_ imagen: CGImage?) { sprite.layer?.contents = imagen }
 
-    func mostrarGlobo(_ texto: String?) {
-        guard let texto else { globo.isHidden = true; return }
-        globo.stringValue = "  \(texto)  "
-        globo.sizeToFit()
-        let ancho = min(globo.frame.width + 8, 216)
-        globo.frame = NSRect(x: (220 - ancho) / 2, y: Self.tamSprite.height + 6, width: ancho, height: 22)
+    func mostrarGlobo(_ chips: [Chip]?) {
+        guard let chips, !chips.isEmpty else { globo.isHidden = true; return }
+        globo.mostrar(chips)
+        // La celda del sprite tiene aire transparente arriba: el globo se apoya casi sobre la cabeza.
+        globo.setFrameOrigin(NSPoint(x: ((220 - globo.frame.width) / 2).rounded(), y: Self.tamSprite.height - 4))
         globo.isHidden = false
     }
 }

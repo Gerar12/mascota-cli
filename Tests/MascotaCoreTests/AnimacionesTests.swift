@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import MascotaCore
 
@@ -26,4 +27,21 @@ import Testing
     let s = Sesion(cli: "codex", session: "x", project: "vps-prod", state: .done, ts: 0)
     #expect(Textos.globo(s, estado: .done) == "Codex terminó · vps-prod")
     #expect(Textos.globo(s, estado: .waiting) == "Codex necesita permiso · vps-prod")
+}
+
+@Test func chipsDelGlobo() {
+    let t: TimeInterval = 1_790_000_000
+    let ahora = Date(timeIntervalSince1970: t)
+    let lista = [
+        Sesion(cli: "codex", session: "b", project: "p", state: .waiting, ts: t - 5),
+        Sesion(cli: "claude", session: "a", project: "p", state: .running, ts: t - 1),
+        Sesion(cli: "claude", session: "c", project: "p", state: .failed, ts: t - 120),
+        Sesion(cli: "claude", session: "viejo", project: "p", state: .done, ts: t - 40 * 60),
+    ]
+    #expect(Textos.chips(lista, ahora: ahora) == [
+        Chip(cli: "claude", estado: .done),
+        Chip(cli: "claude", estado: .running),
+        Chip(cli: "codex", estado: .waiting),
+    ])
+    #expect(Textos.chips([], ahora: ahora) == [])
 }

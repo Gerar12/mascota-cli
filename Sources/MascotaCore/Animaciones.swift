@@ -51,3 +51,22 @@ public enum Textos {
         return "\(s.nombreCLI) \(verbo) · \(s.project)"
     }
 }
+
+/// Un indicador del globo: qué CLI y en qué estado.
+public struct Chip: Equatable, Sendable {
+    public let cli: String
+    public let estado: EstadoAgente
+
+    public init(cli: String, estado: EstadoAgente) {
+        self.cli = cli; self.estado = estado
+    }
+}
+
+extension Textos {
+    /// Indicadores de todas las sesiones vigentes: Claude primero, luego Codex; cada uno por antigüedad.
+    public static func chips(_ sesiones: [Sesion], ahora: Date) -> [Chip] {
+        Agregador.vigentes(sesiones, ahora: ahora)
+            .sorted { ($0.cli, $0.ts) < ($1.cli, $1.ts) }
+            .map { Chip(cli: $0.cli, estado: Agregador.estadoEfectivo($0, ahora: ahora)) }
+    }
+}
