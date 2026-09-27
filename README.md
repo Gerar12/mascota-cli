@@ -23,7 +23,7 @@ rm -rf ~/Applications/Mascota.app ~/.mascota
 
 ## Mascota propia
 
-Cualquier mascota con el formato de Codex v2 (`pet.json` + hoja de sprites de 1536×2288, celdas de 192×208) en `~/.codex/pets/<id>/` o `~/.mascota/mascotas/<id>/` aparece en el menú. Se pueden crear con la skill `hatch-pet` de Codex.
+Cualquier mascota con el formato de Codex v2 (`pet.json` + hoja de sprites de 1536×2288, celdas de 192×208) en `~/.codex/pets/<id>/` o `~/.mascota/mascotas/<id>/` aparece en el menú. Se pueden crear con la skill `hatch-pet` de Codex. `python3 scripts/dibujar-clawd.py` dibuja a Clawd (el cangrejito de Claude Code) en pixel art y lo deja en `~/.codex/pets/clawd`.
 
 ## Cómo funciona
 
