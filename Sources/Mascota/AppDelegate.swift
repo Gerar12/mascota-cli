@@ -92,6 +92,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.cambiarTamano(ancho)
     }
 
+    /// Corta la travesura sin mover la ventana y reinicia la cuenta para la siguiente.
+    private func cancelarAccion() {
+        accion = nil
+        proximaAccion = Date().addingTimeInterval(Reposo.espera(.random(in: 0..<1)))
+    }
+
     /// Termina la travesura en curso, regresa a casa y agenda la siguiente.
     private func terminarAccion(_ ahora: Date) {
         guard accion != nil else { return }
@@ -165,12 +171,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let self else { return }
             NSMenu.popUpContextMenu(self.menu.menu, with: evento, for: self.panel.sprite)
         }
-        // Arrastrarla le da una casa nueva (y corta el paseo en curso sin regresarla).
-        panel.sprite.alTerminarArrastre = { [weak self] in
-            guard let self else { return }
-            self.accion = nil
-            self.panel.guardarCasa()
+        // Al agarrarla se corta la travesura (sin regresarla) para que nada la mueva durante el arrastre;
+        // al soltarla en otro lugar, el panel ya guardó esa casa nueva.
+        panel.sprite.alPresionar = { [weak self] in
+            self?.cancelarAccion()
+            self?.panel.guardarCasa()     // si iba a medio paseo, se queda donde lo agarraste
         }
+        panel.alMoverUsuario = { [weak self] in self?.cancelarAccion() }
         catalogo = CatalogoMascotas.cargar(directorios: [
             raiz.appendingPathComponent("mascotas"),
             FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".codex/pets"),

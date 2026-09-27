@@ -4,19 +4,22 @@ import MascotaCore
 /// Vista de la mascota: arrastrar mueve la ventana; un clic sin arrastrar abre el menú.
 final class VistaSprite: NSView {
     var alHacerClic: ((NSEvent) -> Void)?
-    var alTerminarArrastre: (() -> Void)?
+    /// Al presionar sobre la mascota (antes de un posible arrastre).
+    var alPresionar: (() -> Void)?
     private var arrastro = false
 
     override var mouseDownCanMoveWindow: Bool { false }
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
-    override func mouseDown(with event: NSEvent) { arrastro = false }
+    override func mouseDown(with event: NSEvent) {
+        arrastro = false
+        alPresionar?()
+    }
 
     override func mouseDragged(with event: NSEvent) {
         guard !arrastro else { return }
         arrastro = true
-        window?.performDrag(with: event)      // bloquea hasta soltar el mouse
-        alTerminarArrastre?()
+        window?.performDrag(with: event)
     }
 
     override func mouseUp(with event: NSEvent) {
@@ -63,6 +66,7 @@ final class PanelMascota: NSPanel {
         }
         let guardado = CGFloat(UserDefaults.standard.double(forKey: "tamano"))
         cambiarTamano(guardado > 0 ? guardado : 80)
+        vigilarMovimientos()
     }
 
     /// Cambia el tamaño de la mascota dejando fijo el centro de abajo, para que no salte de lugar.
@@ -71,8 +75,10 @@ final class PanelMascota: NSPanel {
         UserDefaults.standard.set(Double(ancho), forKey: "tamano")
         let t = tamSprite
         let tamPanel = NSSize(width: max(220, t.width + 40), height: t.height + 40)
-        setFrame(NSRect(x: (frame.midX - tamPanel.width / 2).rounded(), y: frame.minY,
-                        width: tamPanel.width, height: tamPanel.height), display: true)
+        moverYo {
+            setFrame(NSRect(x: (frame.midX - tamPanel.width / 2).rounded(), y: frame.minY,
+                            width: tamPanel.width, height: tamPanel.height), display: true)
+        }
         contentView?.frame = NSRect(origin: .zero, size: tamPanel)
         sprite.frame = NSRect(x: ((tamPanel.width - t.width) / 2).rounded(), y: 0, width: t.width, height: t.height)
         if !globo.isHidden { colocarGlobo() }
@@ -83,6 +89,30 @@ final class PanelMascota: NSPanel {
     private(set) var casa = NSPoint.zero
     var altoSprite: CGFloat { tamSprite.height }
 
+    /// Avisa cuando el usuario movió la ventana (no la app): ese lugar ya se guardó como casa nueva.
+    var alMoverUsuario: (() -> Void)?
+    private var moviendoYo = false
+    private var observador: NSObjectProtocol?
+
+    /// Cualquier movimiento que no hizo la app lo hizo el usuario (arrastre, cambio de pantalla…).
+    private func vigilarMovimientos() {
+        observador = NotificationCenter.default.addObserver(
+            forName: NSWindow.didMoveNotification, object: self, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self, !self.moviendoYo else { return }
+                self.guardarCasa()
+                self.alMoverUsuario?()
+            }
+        }
+    }
+
+    /// Mueve la ventana desde la app (sin tomarlo como movimiento del usuario).
+    private func moverYo(_ cambio: () -> Void) {
+        moviendoYo = true
+        cambio()
+        moviendoYo = false
+    }
+
     func guardarCasa() {
         casa = frame.origin
         saveFrame(usingName: "MascotaPanel")
@@ -91,7 +121,7 @@ final class PanelMascota: NSPanel {
     /// Mueve la ventana a `dx` puntos de su casa (paseos); 0 = en casa.
     func ponerDesplazamiento(_ dx: CGFloat) {
         let destino = NSPoint(x: (casa.x + dx).rounded(), y: casa.y)
-        if frame.origin != destino { setFrameOrigin(destino) }
+        if frame.origin != destino { moverYo { setFrameOrigin(destino) } }
     }
 
     private func colocarGlobo() {
