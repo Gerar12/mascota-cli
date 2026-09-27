@@ -7,12 +7,12 @@ import ServiceManagement
 final class MenuMascota: NSObject, NSMenuDelegate {
     let menu = NSMenu()
     /// Elementos de Energía del menú actual, para cambiarlos en vivo si se conecta o desconecta el cargador.
-    private var energia: (encabezado: NSMenuItem, opciones: [NSMenuItem])?
+    private var energia: (encabezado: NSMenuItem?, opciones: [NSMenuItem])?
 
     /// Sin cargador las opciones no se pueden tocar (conservan su ✓ para reactivarse al conectarlo).
     func actualizarEnergia(conCargador: Bool) {
         guard let energia else { return }
-        energia.encabezado.title = Energia.titulo(conCargador: conCargador)
+        energia.encabezado?.title = Energia.titulo(conCargador: conCargador)
         for it in energia.opciones {
             it.isEnabled = conCargador
             if #available(macOS 14.4, *) { it.subtitle = conCargador ? nil : "Conecta el cargador para usarlo" }
@@ -29,10 +29,12 @@ final class MenuMascota: NSObject, NSMenuDelegate {
     func menuNeedsUpdate(_ menu: NSMenu) {
         guard let app else { return }
         menu.removeAllItems()
-
-        // Una sola línea fija; la lista (que puede crecer mucho) vive en el submenú.
         let ahora = Date()
-        // Solo las terminales del usuario: los encargos automáticos se ven en el globo, no aquí.
+        let hora = DateFormatter()
+        hora.dateFormat = "HH:mm"
+
+        // ── De un vistazo ──
+        // Sesiones: una línea fija; la lista (que puede crecer mucho) vive en el submenú.
         let sesiones = Agregador.delUsuario(Agregador.vigentes(app.sesiones, ahora: ahora))
             .sorted { ($0.cli, $1.ts) < ($1.cli, $0.ts) }
         if sesiones.isEmpty {
@@ -47,23 +49,43 @@ final class MenuMascota: NSObject, NSMenuDelegate {
                 return it
             }))
         }
-
-        // Tu tarea de hoy en Things (solo si Things está abierto).
+        // Tu tarea de hoy en Things (solo si Things está abierto), recortada para no ensanchar el menú.
         app.things.refrescar()
         if let t = app.things.tarea {
-            let pendientes = app.things.pendientes > 1 ? " · \(app.things.pendientes) pendientes" : ""
-            let hoy = submenu("Hoy: \(t.nombre)", icono: "checklist", [
+            let hoy = submenu("Hoy: \(Self.recortar(t.nombre, 35))", icono: "checklist", [
                 accion("Marcar como hecha", #selector(completarTarea), icono: "checkmark.circle"),
                 accion("Abrir en Things", #selector(abrirTarea), icono: "arrow.up.forward.app"),
             ])
-            if #available(macOS 14.4, *), !pendientes.isEmpty { hoy.subtitle = "Things\(pendientes)" }
+            hoy.toolTip = t.nombre + (app.things.pendientes > 1 ? " (\(app.things.pendientes) pendientes)" : "")
             menu.addItem(hoy)
         }
+        // Cuota en una línea; el detalle de los reinicios, en el submenú.
+        let claude = LectorCuotas.claude(), codex = LectorCuotas.codex()
+        var partes: [String] = []
+        var detalle: [NSMenuItem] = []
+        if let c = claude {
+            partes.append("Claude \(Int(c.cincoHoras.porcentaje.rounded())) %")
+            detalle.append(linea("Claude · \(Int(c.cincoHoras.porcentaje.rounded())) % de 5 h",
+                                 "se reinicia a las \(hora.string(from: c.cincoHoras.reinicio))"))
+            detalle.append(linea("Claude · \(Int(c.semana.porcentaje.rounded())) % de la semana",
+                                 "se reinicia el \(Cuota.fechaCorta(c.semana.reinicio))"))
+        }
+        if let x = codex {
+            partes.append("Codex \(Int(x.porcentaje.rounded())) %")
+            detalle.append(linea(x.titulo, x.detalle().replacingOccurrences(of: "Se reinicia", with: "se reinicia")))
+        }
+        if !partes.isEmpty {
+            menu.addItem(submenu("Cuota · " + partes.joined(separator: " · "), icono: "gauge.with.dots.needle.33percent", detalle))
+        }
 
-        // No molestar: calla la voz, esconde el globo y los avisos por un rato.
-        let f = DateFormatter()
-        f.dateFormat = "HH:mm"
-        let titulo = app.noMolestar ? "No molestar · hasta las \(f.string(from: app.noMolestarHasta!))" : "No molestar"
+        // ── Lo del día a día ──
+        menu.addItem(.separator())
+        if ControlVoz.disponible {
+            let leer = accion("Leer respuestas", #selector(alternarVoz), icono: "speaker.wave.2")
+            leer.state = ControlVoz.silenciada ? .off : .on
+            menu.addItem(leer)
+        }
+        let titulo = app.noMolestar ? "No molestar · hasta las \(hora.string(from: app.noMolestarHasta!))" : "No molestar"
         var opciones = [
             opcionNoMolestar("30 minutos", .minutos(30)),
             opcionNoMolestar("1 hora", .minutos(60)),
@@ -73,68 +95,36 @@ final class MenuMascota: NSObject, NSMenuDelegate {
         let nm = submenu(titulo, icono: app.noMolestar ? "moon.fill" : "moon", opciones)
         nm.state = app.noMolestar ? .on : .off
         menu.addItem(nm)
+        let trabajo = accion("Despierta mientras trabajan", #selector(alternarEnergiaTrabajo), icono: "cup.and.saucer")
+        trabajo.state = app.despiertaMientrasTrabajan ? .on : .off
+        trabajo.toolTip = "Con el cargador conectado, la Mac no entra en reposo mientras Claude o Codex trabajan (y 15 min después). La pantalla sí se apaga."
+        menu.addItem(trabajo)
 
-        // Cuotas de Claude y Codex.
-        let claude = LectorCuotas.claude(), codex = LectorCuotas.codex()
-        if claude != nil || codex != nil {
-            menu.addItem(.separator())
-            menu.addItem(.sectionHeader(title: "Cuota"))
-            if let c = claude {
-                let it = accion(c.titulo, #selector(nada), icono: "gauge.with.dots.needle.33percent")
-                if #available(macOS 14.4, *) {
-                    it.subtitle = "5 h: se reinicia a las \(f.string(from: c.cincoHoras.reinicio)) · semana: "
-                        + Cuota.fechaCorta(c.semana.reinicio)
-                }
-                menu.addItem(it)
-            }
-            if let x = codex {
-                let it = accion(x.titulo, #selector(nada), icono: "gauge.with.dots.needle.50percent")
-                if #available(macOS 14.4, *) { it.subtitle = x.detalle() }
-                menu.addItem(it)
-            }
-        }
-
+        // ── Todo lo demás ──
+        menu.addItem(.separator())
+        var mas: [NSMenuItem] = []
         if ControlVoz.disponible {
-            menu.addItem(.separator())
-            menu.addItem(.sectionHeader(title: "Voz"))
-            let leer = accion("Leer respuestas", #selector(alternarVoz), icono: "speaker.wave.2")
-            leer.state = ControlVoz.silenciada ? .off : .on
-            menu.addItem(leer)
             let sinCreditos = ControlVoz.elevenSinCreditos
-            menu.addItem(submenu("Voz", icono: "waveform", Voz.proveedores.map { p in
+            mas.append(.sectionHeader(title: "Voz"))
+            mas.append(submenu("Voz de lectura", icono: "waveform", Voz.proveedores.map { p in
                 let nombre = p.id == "eleven" && sinCreditos ? "\(p.nombre) · sin créditos" : p.nombre
                 let it = accion(nombre, #selector(elegirVoz(_:)))
                 it.representedObject = p.id
                 it.state = ControlVoz.proveedor == p.id ? .on : .off
                 return it
             }))
-            menu.addItem(accion("Repetir lo último", #selector(repetir), icono: "arrow.counterclockwise"))
-            menu.addItem(accion("Callar ahora", #selector(callar), icono: "stop.fill"))
+            mas.append(accion("Repetir lo último", #selector(repetir), icono: "arrow.counterclockwise"))
+            mas.append(accion("Callar ahora", #selector(callar), icono: "stop.fill"))
+            mas.append(.separator())
         }
-
-        menu.addItem(.separator())
-        let encabezado = NSMenuItem.sectionHeader(title: "Energía")
-        menu.addItem(encabezado)
-        let trabajo = accion("Despierta mientras trabajan", #selector(alternarEnergiaTrabajo), icono: "cup.and.saucer")
-        trabajo.state = app.despiertaMientrasTrabajan ? .on : .off
-        trabajo.toolTip = "Con el cargador conectado, la Mac no entra en reposo mientras Claude o Codex trabajan (y 15 min después). La pantalla sí se apaga."
-        menu.addItem(trabajo)
-        let siempre = accion("Despierta siempre", #selector(alternarEnergiaSiempre), icono: "moon.stars")
-        siempre.state = app.despiertaSiempre ? .on : .off
-        siempre.toolTip = "Con el cargador conectado, la Mac no entra en reposo hasta que lo apagues. Con batería no hace nada. La pantalla sí se apaga; cerrar la tapa la duerme igual."
-        menu.addItem(siempre)
-        energia = (encabezado, [trabajo, siempre])
-        actualizarEnergia(conCargador: app.conCargador)
-
-        menu.addItem(.separator())
-        menu.addItem(.sectionHeader(title: "Apariencia"))
-        menu.addItem(submenu("Mascota", icono: "pawprint", app.catalogo.map { m in
+        mas.append(.sectionHeader(title: "Apariencia"))
+        mas.append(submenu("Mascota", icono: "pawprint", app.catalogo.map { m in
             let it = accion(m.nombre, #selector(elegirMascota(_:)))
             it.representedObject = m.id
             it.state = app.mascotaId == m.id ? .on : .off
             return it
         }))
-        menu.addItem(submenu("Tamaño", icono: "arrow.up.left.and.arrow.down.right", PanelMascota.tamanos.map { t in
+        mas.append(submenu("Tamaño", icono: "arrow.up.left.and.arrow.down.right", PanelMascota.tamanos.map { t in
             let it = accion(t.nombre, #selector(elegirTamano(_:)))
             it.representedObject = t.ancho
             it.state = app.panel.anchoSprite == t.ancho ? .on : .off
@@ -143,16 +133,38 @@ final class MenuMascota: NSObject, NSMenuDelegate {
         let vida = accion("Vida propia", #selector(alternarVida), icono: "sparkles")
         vida.state = app.vidaPropia ? .on : .off
         vida.toolTip = "Cuando nadie trabaja: te mira, pasea un poquito y hace travesuras."
-        menu.addItem(vida)
-        menu.addItem(accion("Ocultar mascota", #selector(ocultar), icono: "eye.slash"))
-
-        menu.addItem(.separator())
+        mas.append(vida)
+        mas.append(accion("Ocultar mascota", #selector(ocultar), icono: "eye.slash"))
+        mas.append(.separator())
+        mas.append(.sectionHeader(title: "Mac"))
+        let siempre = accion("Despierta siempre", #selector(alternarEnergiaSiempre), icono: "moon.stars")
+        siempre.state = app.despiertaSiempre ? .on : .off
+        siempre.toolTip = "Con el cargador conectado, la Mac no entra en reposo hasta que lo apagues. Con batería no hace nada. La pantalla sí se apaga; cerrar la tapa la duerme igual."
+        mas.append(siempre)
         let login = accion("Abrir al iniciar sesión", #selector(alternarLogin), icono: "power")
         login.state = SMAppService.mainApp.status == .enabled ? .on : .off
-        menu.addItem(login)
+        mas.append(login)
+        let raizMas = submenu("Más", icono: "ellipsis.circle", mas)
+        raizMas.submenu?.autoenablesItems = false
+        menu.addItem(raizMas)
+
+        energia = (nil, [trabajo, siempre])
+        actualizarEnergia(conCargador: app.conCargador)
+
         let salir = accion("Salir de Mascota", #selector(salir))
         salir.keyEquivalent = "q"
         menu.addItem(salir)
+    }
+
+    /// Línea informativa con subtítulo (macOS 14.4+) o todo junto.
+    private func linea(_ titulo: String, _ detalle: String) -> NSMenuItem {
+        let it = accion(titulo, #selector(nada))
+        if #available(macOS 14.4, *) { it.subtitle = detalle } else { it.title = "\(titulo) — \(detalle)" }
+        return it
+    }
+
+    private static func recortar(_ texto: String, _ largo: Int) -> String {
+        texto.count <= largo ? texto : String(texto.prefix(largo - 1)).trimmingCharacters(in: .whitespaces) + "…"
     }
 
     private static func iconoEstado(_ e: EstadoAgente) -> String {
