@@ -28,9 +28,9 @@ SOMBRA = (186, 94, 63, 255)
 OJO = (30, 22, 20, 255)
 CACHETE = (242, 148, 150, 255)
 LAGRIMA = (110, 185, 255, 255)
-PC_TAPA = (205, 208, 215, 255)
-PC_BORDE = (142, 146, 156, 255)
-PC_LOGO = (245, 245, 250, 255)
+PC_TAPA = (118, 122, 134, 255)   # gris espacial
+PC_BORDE = (84, 87, 97, 255)
+PC_LOGO = (170, 174, 186, 255)
 GLOBO = (252, 252, 252, 255)
 
 ANCHO, ALTO = 18, 12            # cuerpo
@@ -99,10 +99,10 @@ def brazo(l, lado, pose, bx, by, extra=0):
     elif pose == 'caido':
         l.rect(pegado, by + 7, 2, 4, CUERPO)
     elif pose == 'teclear':
-        x = bx + 2 if lado == 'i' else bx + ANCHO - 5
-        y = by + 9 + extra                   # manitas sobre el borde de la laptop, con contorno propio
-        l.rect(x - 1, y - 1, 5, 4, CONTORNO)
-        l.rect(x, y, 3, 2, CUERPO)
+        x = bx + 1 if lado == 'i' else bx + ANCHO - 3   # manitas a los lados de la tapa
+        y = by + 8 + extra
+        l.rect(x - 1, y - 1, 4, 4, CONTORNO)
+        l.rect(x, y, 2, 2, CUERPO)
     elif pose == 'barbilla':
         l.rect(pegado, by + 4, 2, 6, CUERPO)
         l.rect(pegado - 1, by + 4, 1, 2, CUERPO)
@@ -134,10 +134,19 @@ def cachetes(l, bx, by):
 
 
 def laptop(l, bx, by):
-    l.rect(bx + 2, by + 8, ANCHO - 4, ALTO - 5, PC_TAPA)
-    l.rect(bx + 2, by + 8, ANCHO - 4, 1, PC_BORDE)
-    l.rect(bx + 1, by + ALTO + 3, ANCHO - 2, 1, PC_BORDE)
-    l.rect(bx + ANCHO // 2 - 1, by + 11, 2, 2, PC_LOGO)
+    """Laptop vista por detrás: tapa plateada con el asterisco de Claude y el borde del teclado."""
+    x, y, w, h = bx + 3, by + 8, ANCHO - 6, 4
+    l.rect(x - 1, y - 1, w + 2, h + 2, CONTORNO)
+    l.rect(x, y, w, h, PC_TAPA)
+    l.rect(x, y, w, 1, PC_LOGO)                          # brillo del borde de arriba
+    l.rect(x + w - 1, y + 1, 1, h - 1, PC_BORDE)        # sombra lateral
+    cx, cy = x + w // 2 - 3, y                          # asterisco naranja de Claude (5x5, en estrella)
+    for fila, patron in enumerate(("..#..", "#.#.#", ".###.", "#.#.#", "..#..")):
+        for col, c in enumerate(patron):
+            if c == '#' and y <= cy + fila < y + h:
+                l.punto(cx + col, cy + fila, LUZ)
+    l.rect(x - 2, y + h + 1, w + 4, 1, CONTORNO)        # teclado visto de canto
+    l.rect(x - 1, y + h, w + 2, 1, PC_BORDE)
 
 
 def globo_pregunta(l, bx, by):
