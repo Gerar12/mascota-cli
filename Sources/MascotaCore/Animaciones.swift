@@ -63,10 +63,11 @@ public struct Chip: Equatable, Sendable {
 }
 
 extension Textos {
-    /// Indicadores de todas las sesiones vigentes: Claude primero, luego Codex; cada uno por antigüedad.
+    /// Un indicador por CLI (Claude primero, luego Codex) con el estado más urgente de sus sesiones.
     public static func chips(_ sesiones: [Sesion], ahora: Date) -> [Chip] {
-        Agregador.vigentes(sesiones, ahora: ahora)
-            .sorted { ($0.cli, $0.ts) < ($1.cli, $1.ts) }
-            .map { Chip(cli: $0.cli, estado: Agregador.estadoEfectivo($0, ahora: ahora)) }
+        Dictionary(grouping: sesiones, by: \.cli).keys.sorted().compactMap { cli in
+            Agregador.principal(sesiones.filter { $0.cli == cli }, ahora: ahora)
+                .map { Chip(cli: cli, estado: Agregador.estadoEfectivo($0, ahora: ahora)) }
+        }
     }
 }

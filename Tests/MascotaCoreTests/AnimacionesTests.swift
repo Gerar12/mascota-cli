@@ -38,10 +38,16 @@ import Testing
         Sesion(cli: "claude", session: "c", project: "p", state: .failed, ts: t - 120),
         Sesion(cli: "claude", session: "viejo", project: "p", state: .done, ts: t - 40 * 60),
     ]
+    // Un solo indicador por CLI, con el estado más urgente de sus sesiones.
     #expect(Textos.chips(lista, ahora: ahora) == [
-        Chip(cli: "claude", estado: .done),
         Chip(cli: "claude", estado: .running),
         Chip(cli: "codex", estado: .waiting),
     ])
+    let soloClaude = [
+        Sesion(cli: "claude", session: "a", project: "p", state: .done, ts: t - 1),
+        Sesion(cli: "claude", session: "b", project: "p", state: .waiting, ts: t - 9),
+        Sesion(cli: "claude", session: "c", project: "p", state: .running, ts: t - 3),
+    ]
+    #expect(Textos.chips(soloClaude, ahora: ahora) == [Chip(cli: "claude", estado: .waiting)])
     #expect(Textos.chips([], ahora: ahora) == [])
 }
