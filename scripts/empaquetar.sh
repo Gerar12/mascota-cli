@@ -8,6 +8,8 @@ APP="$RAIZ/.build/Mascota.app"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS"
 cp .build/release/Mascota "$APP/Contents/MacOS/Mascota"
+mkdir -p "$APP/Contents/Resources"
+python3 "$RAIZ/scripts/icono.py" "$APP/Contents/Resources/Mascota.icns" || echo "Sin ícono (falta Pillow)"
 cat > "$APP/Contents/Info.plist" <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -19,6 +21,7 @@ cat > "$APP/Contents/Info.plist" <<'EOF'
   <key>CFBundleShortVersionString</key><string>0.1</string>
   <key>LSMinimumSystemVersion</key><string>14.0</string>
   <key>LSUIElement</key><true/>
+  <key>CFBundleIconFile</key><string>Mascota</string>
   <key>NSAppleEventsUsageDescription</key><string>Para llevarte a la terminal de Ghostty de cada sesión.</string>
 </dict></plist>
 EOF
@@ -27,5 +30,6 @@ mkdir -p "$HOME/Applications"
 pkill -x Mascota 2>/dev/null || true
 rm -rf "$HOME/Applications/Mascota.app"
 cp -R "$APP" "$HOME/Applications/Mascota.app"
+/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$HOME/Applications/Mascota.app" 2>/dev/null || true
 open "$HOME/Applications/Mascota.app"
 echo "Mascota instalada en ~/Applications/Mascota.app"
