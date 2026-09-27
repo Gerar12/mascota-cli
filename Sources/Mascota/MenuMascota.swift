@@ -75,18 +75,18 @@ final class MenuMascota: NSObject, NSMenuDelegate {
             leer.state = ControlVoz.silenciada ? .off : .on
             menu.addItem(leer)
         }
-        let titulo = app.noMolestar ? "No molestar · hasta las \(hora.string(from: app.noMolestarHasta!))" : "No molestar"
+        let titulo = app.avisos.noMolestar ? "No molestar · hasta las \(hora.string(from: app.avisos.noMolestarHasta!))" : "No molestar"
         var opciones = [
             opcionNoMolestar("30 minutos", .minutos(30)),
             opcionNoMolestar("1 hora", .minutos(60)),
             opcionNoMolestar("Hasta mañana (8:00)", .hastaManana),
         ]
-        if app.noMolestar { opciones.append(accion("Desactivar", #selector(desactivarNoMolestar), icono: "bell")) }
-        let nm = submenu(titulo, icono: app.noMolestar ? "moon.fill" : "moon", opciones)
-        nm.state = app.noMolestar ? .on : .off
+        if app.avisos.noMolestar { opciones.append(accion("Desactivar", #selector(desactivarNoMolestar), icono: "bell")) }
+        let nm = submenu(titulo, icono: app.avisos.noMolestar ? "moon.fill" : "moon", opciones)
+        nm.state = app.avisos.noMolestar ? .on : .off
         menu.addItem(nm)
         let trabajo = accion("Despierta mientras trabajan", #selector(alternarEnergiaTrabajo), icono: "cup.and.saucer")
-        trabajo.state = app.despiertaMientrasTrabajan ? .on : .off
+        trabajo.state = app.energia.mientrasTrabajan ? .on : .off
         trabajo.toolTip = "Con el cargador conectado, la Mac no entra en reposo mientras Claude o Codex trabajan (y 15 min después). La pantalla sí se apaga."
         menu.addItem(trabajo)
 
@@ -121,14 +121,14 @@ final class MenuMascota: NSObject, NSMenuDelegate {
             return it
         }))
         let vida = accion("Vida propia", #selector(alternarVida), icono: "sparkles")
-        vida.state = app.vidaPropia ? .on : .off
+        vida.state = app.vida.activa ? .on : .off
         vida.toolTip = "Cuando nadie trabaja: te mira, pasea un poquito y hace travesuras."
         mas.append(vida)
         mas.append(accion("Ocultar mascota", #selector(ocultar), icono: "eye.slash"))
         mas.append(.separator())
         mas.append(.sectionHeader(title: "Mac"))
         let siempre = accion("Despierta siempre", #selector(alternarEnergiaSiempre), icono: "moon.stars")
-        siempre.state = app.despiertaSiempre ? .on : .off
+        siempre.state = app.energia.siempre ? .on : .off
         siempre.toolTip = "Con el cargador conectado, la Mac no entra en reposo hasta que lo apagues. Con batería no hace nada. La pantalla sí se apaga; cerrar la tapa la duerme igual."
         mas.append(siempre)
         let login = accion("Abrir al iniciar sesión", #selector(alternarLogin), icono: "power")
@@ -139,7 +139,7 @@ final class MenuMascota: NSObject, NSMenuDelegate {
         menu.addItem(raizMas)
 
         energia = (nil, [trabajo, siempre])
-        actualizarEnergia(conCargador: app.conCargador)
+        actualizarEnergia(conCargador: app.energia.conCargador)
 
         let salir = accion("Salir de Mascota", #selector(salir))
         salir.keyEquivalent = "q"
@@ -210,11 +210,11 @@ final class MenuMascota: NSObject, NSMenuDelegate {
 
     @objc private func callar() { ControlVoz.callar() }
 
-    @objc private func alternarEnergiaTrabajo() { app?.despiertaMientrasTrabajan.toggle() }
+    @objc private func alternarEnergiaTrabajo() { app?.energia.mientrasTrabajan.toggle() }
 
-    @objc private func alternarEnergiaSiempre() { app?.despiertaSiempre.toggle() }
+    @objc private func alternarEnergiaSiempre() { app?.energia.siempre.toggle() }
 
-    @objc private func alternarVida() { app?.vidaPropia.toggle() }
+    @objc private func alternarVida() { app?.vida.activa.toggle() }
 
     private func opcionNoMolestar(_ titulo: String, _ o: NoMolestar.Opcion) -> NSMenuItem {
         let it = accion(titulo, #selector(activarNoMolestar(_:)))
@@ -224,10 +224,10 @@ final class MenuMascota: NSObject, NSMenuDelegate {
 
     @objc private func activarNoMolestar(_ it: NSMenuItem) {
         guard let caja = it.representedObject as? CajaOpcion else { return }
-        app?.activarNoMolestar(caja.opcion)
+        app?.avisos.activarNoMolestar(caja.opcion)
     }
 
-    @objc private func desactivarNoMolestar() { app?.desactivarNoMolestar() }
+    @objc private func desactivarNoMolestar() { app?.avisos.desactivarNoMolestar() }
 
     @objc private func nada() {}
 
