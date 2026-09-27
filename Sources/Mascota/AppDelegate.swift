@@ -13,12 +13,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var ocultoManual = false
     private var ultimoSondeo = Date.distantPast
 
-    private var ultimoPs = (cuando: Date.distantPast, codex: false, voz: false)
+    private var ultimoPs = (cuando: Date.distantPast, codex: false)
 
-    /// Una sola consulta a `ps` por segundo: ¿hay alguna terminal con Codex (el servicio de fondo no tiene
-    /// terminal) y está sonando el lector de voz?
-    private func procesos(_ ahora: Date) -> (codex: Bool, voz: Bool) {
-        guard ahora.timeIntervalSince(ultimoPs.cuando) >= 1 else { return (ultimoPs.codex, ultimoPs.voz) }
+    /// ¿Hay alguna terminal con Codex? (proceso `codex` con terminal; el servicio de fondo no tiene).
+    /// Se consulta cada 2 s porque lanza `ps`.
+    private func codexAbierto(_ ahora: Date) -> Bool {
+        guard ahora.timeIntervalSince(ultimoPs.cuando) >= 2 else { return ultimoPs.codex }
         let ps = Process()
         ps.executableURL = URL(fileURLWithPath: "/bin/ps")
         ps.arguments = ["-axo", "tty=,comm="]
@@ -27,9 +27,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if (try? ps.run()) != nil {
             let texto = String(decoding: salida.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
             ps.waitUntilExit()
-            ultimoPs = (ahora, Procesos.hayCodexConTerminal(salidaPs: texto), Procesos.hayVozSonando(salidaPs: texto))
+            ultimoPs = (ahora, Procesos.hayCodexConTerminal(salidaPs: texto))
         }
-        return (ultimoPs.codex, ultimoPs.voz)
+        return ultimoPs.codex
     }
 
     private let abierta = Date()
@@ -91,7 +91,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let dir = raiz.appendingPathComponent("estado")
             // Terminal cerrada sin SessionEnd: el proceso ya no existe, se olvida la sesión.
             let (vivas, muertas) = Agregador.separarPorProceso(LectorEstado.leer(directorio: dir),
-                                                               codexAbierto: procesos(ahora).codex) { pid in
+                                                               codexAbierto: codexAbierto(ahora)) { pid in
                 kill(pid, 0) == 0 || errno == EPERM
             }
             for s in muertas {
@@ -115,11 +115,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let cuadro = h?.celda(fila: anim.fila, columna: Animaciones.cuadro(anim, tiempo: desdeCambio))
         panel.mostrarCuadro(cuadro, aireSuperior: h?.aireSuperior(fila: anim.fila) ?? 0)
 
-        let voz: EstadoVoz? = ControlVoz.disponible
-            ? Voz.estado(silenciada: ControlVoz.silenciada, sonando: procesos(ahora).voz) : nil
         let mostrarGlobo = principal != nil && (estado == .waiting || estado == .failed || desdeCambio < 6)
-            || voz == .hablando
-        panel.mostrarGlobo(mostrarGlobo ? Textos.chips(sesiones, ahora: ahora) : nil, voz: voz)
+        panel.mostrarGlobo(mostrarGlobo ? Textos.chips(sesiones, ahora: ahora) : nil)
 
         let debe = Agregador.debeMostrarse(sesiones, ahora: ahora) && !ocultoManual
         if debe && !panel.isVisible { panel.orderFrontRegardless() }

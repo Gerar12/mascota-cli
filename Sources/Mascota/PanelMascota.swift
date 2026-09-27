@@ -99,10 +99,9 @@ final class PanelMascota: NSPanel {
         }
     }
 
-    func mostrarGlobo(_ chips: [Chip]?, voz: EstadoVoz?) {
-        // La voz se muestra junto a los CLI; sola, solo mientras habla.
-        guard let chips, !chips.isEmpty || voz == .hablando else { globo.isHidden = true; return }
-        globo.mostrar(chips, voz: voz)
+    func mostrarGlobo(_ chips: [Chip]?) {
+        guard let chips, !chips.isEmpty else { globo.isHidden = true; return }
+        globo.mostrar(chips)
         colocarGlobo()
         globo.isHidden = false
     }
