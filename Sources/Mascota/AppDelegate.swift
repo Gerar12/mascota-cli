@@ -33,10 +33,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return ultimoPs.codex
     }
 
-    // Energía: automático mientras trabajan (solo con cargador) y manual «siempre» (también con batería).
+    // Energía: automático mientras trabajan y manual «siempre»; los dos SOLO con cargador (macOS ignora
+    // PreventSystemSleep con batería).
     private let vigiliaTrabajo = Vigilia(tipo: kIOPMAssertionTypePreventSystemSleep,
                                          motivo: "Mascota: Claude o Codex están trabajando")
-    private let vigiliaSiempre = Vigilia(tipo: kIOPMAssertPreventUserIdleSystemSleep,
+    private let vigiliaSiempre = Vigilia(tipo: kIOPMAssertionTypePreventSystemSleep,
                                          motivo: "Mascota: mantener despierta siempre")
     private var ultimaVezTrabajando: Date?
 

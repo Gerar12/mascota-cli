@@ -60,7 +60,7 @@ final class MenuMascota: NSObject, NSMenuDelegate {
         menu.addItem(trabajo)
         let siempre = accion("Despierta siempre", #selector(alternarEnergiaSiempre), icono: "moon.stars")
         siempre.state = app.despiertaSiempre ? .on : .off
-        siempre.toolTip = "La Mac no entra en reposo, también con batería, hasta que lo apagues. La pantalla sí se apaga; cerrar la tapa la duerme igual."
+        siempre.toolTip = "Con el cargador conectado, la Mac no entra en reposo hasta que lo apagues. Con batería no hace nada. La pantalla sí se apaga; cerrar la tapa la duerme igual."
         menu.addItem(siempre)
 
         menu.addItem(.separator())

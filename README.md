@@ -31,7 +31,9 @@ python3 scripts/instalar-hooks.py --voz
 
 Desde el menú de la mascota:
 - **Despierta mientras trabajan** (activado por defecto): con el cargador conectado, la Mac no entra en reposo mientras Claude o Codex trabajan o piden permiso, ni en los 15 minutos siguientes.
-- **Despierta siempre**: impide el reposo también con batería, hasta que lo apagues.
+- **Despierta siempre**: con el cargador conectado, impide el reposo hasta que lo apagues.
+
+Las dos opciones solo funcionan con el cargador conectado: con batería, macOS deja que la Mac entre en reposo con normalidad.
 
 En los dos casos la pantalla sí se apaga. Cerrar la tapa duerme la Mac igual, salvo con un monitor externo. La app usa las aserciones de energía de macOS, las mismas que `caffeinate`, y las suelta al cerrarse.
 

@@ -9,8 +9,7 @@ final class Vigilia {
     private var id: IOPMAssertionID = 0
     private(set) var activa = false
 
-    /// tipo: kIOPMAssertionTypePreventSystemSleep (solo con cargador, como `caffeinate -s`)
-    /// o kIOPMAssertPreventUserIdleSystemSleep (también con batería, como `caffeinate -i`).
+    /// tipo: kIOPMAssertionTypePreventSystemSleep (solo con cargador, como `caffeinate -s`).
     init(tipo: String, motivo: String) {
         self.tipo = tipo
         self.motivo = motivo
