@@ -10,9 +10,11 @@ enum EnfocarTerminal {
             let carpeta = sesion.pid.flatMap(carpetaDeProceso) ?? sesion.cwd
             let lista = Terminales.leer(osascript("""
                 tell application "Ghostty"
+                  -- Dentro de Ghostty, `tab` es una pestaña, no el tabulador: se usa su código.
+                  set sep to character id 9
                   set salida to ""
                   repeat with t in terminals
-                    set salida to salida & (id of t) & tab & (name of t) & tab & (working directory of t) & linefeed
+                    set salida to salida & (id of t) & sep & (name of t) & sep & (working directory of t) & linefeed
                   end repeat
                   return salida
                 end tell
