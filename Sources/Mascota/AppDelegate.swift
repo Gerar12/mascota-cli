@@ -123,7 +123,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let reposo = (Animaciones.idle, ahora.timeIntervalSince(cambio), nil as Celda?)
         // Caricias: vaivén del cursor sobre la mascota → saltito feliz con corazón.
         let puntero = NSEvent.mouseLocation
-        if caricia.registrar(x: puntero.x, encima: panel.rectSprite.contains(puntero), t: ahora.timeIntervalSinceReferenceDate) {
+        if caricia.registrar(x: puntero.x, encima: panel.rectSprite.insetBy(dx: -25, dy: -25).contains(puntero), t: ahora.timeIntervalSinceReferenceDate) {
             cancelarAccion()
             carinoHasta = ahora.addingTimeInterval(1.6)
             panel.mostrarCorazon()

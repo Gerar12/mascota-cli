@@ -52,6 +52,12 @@ import Testing
     var feliz = false
     for (i, x) in xs.enumerated() { feliz = c.registrar(x: x, encima: true, t: Double(i) * 0.1) || feliz }
     #expect(feliz)
+    // Salirse un instante del borde no reinicia la cuenta: 3 vaivenes en 2 s bastan.
+    var conSalida = Caricia()
+    var feliz2 = false
+    let pasos: [(Double, Bool)] = [(0, true), (30, true), (60, false), (30, true), (0, true), (30, true), (60, true), (30, true)]
+    for (i, p) in pasos.enumerated() { feliz2 = conSalida.registrar(x: p.0, encima: p.1, t: Double(i) * 0.15) || feliz2 }
+    #expect(feliz2)
     var lenta = Caricia()
     var nada = false
     for (i, x) in xs.enumerated() { nada = lenta.registrar(x: x, encima: true, t: Double(i) * 0.6) || nada }

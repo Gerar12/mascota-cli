@@ -118,8 +118,8 @@ public enum Avisos {
 
 /// Detecta que el usuario «acaricia» a la mascota: vaivén del cursor encima de ella.
 public struct Caricia: Sendable {
-    public static let cambiosNecesarios = 4
-    public static let ventana: TimeInterval = 1.5
+    public static let cambiosNecesarios = 3
+    public static let ventana: TimeInterval = 2
     private var ultimaX: Double?
     private var direccion = 0
     private var cambios: [TimeInterval] = []
@@ -128,7 +128,9 @@ public struct Caricia: Sendable {
 
     /// Registra una posición del cursor; devuelve true cuando completa una caricia.
     public mutating func registrar(x: Double, encima: Bool, t: TimeInterval) -> Bool {
-        guard encima else { self = Caricia(); return false }
+        // Fuera de la mascota no cuenta, pero tampoco borra lo acumulado (con el cursor rápido
+        // es fácil salirse un instante); la ventana de tiempo descarta lo viejo.
+        guard encima else { return false }
         defer { ultimaX = x }
         guard let antes = ultimaX, abs(x - antes) >= 3 else { return false }
         let nueva = x > antes ? 1 : -1
