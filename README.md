@@ -33,5 +33,5 @@ Cualquier mascota con el formato de Codex v2 (`pet.json` + hoja de sprites de 15
 
 - `swift test`: lógica pura en `Sources/MascotaCore`.
 - `sh pruebas/*.sh`: pruebas del hook y los instaladores.
-- `Package.swift` necesita `swift-tools-version: 6.4`: con 6.0 y solo Command Line Tools, swift-testing no encuentra sus macros.
+- Con solo Command Line Tools, swift-testing a veces no encuentra sus macros en compilaciones incrementales: `Package.swift` le pasa `-plugin-path` explícito. Tras `empaquetar.sh` (release), `swift test` puede necesitar `rm -rf .build`.
 - El disco de la Mac no distingue mayúsculas: `tests/` y `Tests/` son la misma carpeta. Por eso las pruebas de shell viven en `pruebas/`.
