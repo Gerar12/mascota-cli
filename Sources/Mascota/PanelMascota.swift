@@ -31,6 +31,7 @@ final class VistaSprite: NSView {
 final class PanelMascota: NSPanel {
     let sprite = VistaSprite()
     private let globo = GloboEstado()
+    private let corazon = NSImageView()
     /// Tamaños que ofrece el menú (ancho del sprite en puntos); Mediana es el mismo de Codex.
     static let tamanos: [(nombre: String, ancho: CGFloat)] = [("Chica", 56), ("Mediana", 80), ("Grande", 112), ("Muy grande", 144)]
     private(set) var anchoSprite: CGFloat = 80
@@ -59,6 +60,11 @@ final class PanelMascota: NSPanel {
 
         fondo.addSubview(sprite)
         fondo.addSubview(globo)
+        let conf = NSImage.SymbolConfiguration(pointSize: 16, weight: .bold)
+            .applying(NSImage.SymbolConfiguration(paletteColors: [.systemPink]))
+        corazon.image = NSImage(systemSymbolName: "heart.fill", accessibilityDescription: nil)?.withSymbolConfiguration(conf)
+        corazon.isHidden = true
+        fondo.addSubview(corazon)
         contentView = fondo
 
         if !setFrameUsingName("MascotaPanel"), let pantalla = NSScreen.main?.visibleFrame {
@@ -84,6 +90,18 @@ final class PanelMascota: NSPanel {
         if !globo.isHidden { colocarGlobo() }
         guardarCasa()
     }
+
+    /// Corazoncito que salta sobre la cabeza cuando la acarician.
+    func mostrarCorazon(duracion: TimeInterval = 1.6) {
+        let cabeza = (tamSprite.height * (1 - aireSuperior)).rounded()
+        corazon.frame = NSRect(x: sprite.frame.maxX - 22, y: cabeza - 6, width: 22, height: 22)
+        corazon.isHidden = false
+        corazon.addSymbolEffect(.bounce, options: .repeat(2))
+        DispatchQueue.main.asyncAfter(deadline: .now() + duracion) { [weak self] in self?.corazon.isHidden = true }
+    }
+
+    /// Rectángulo de la mascota en coordenadas de pantalla (para caricias).
+    var rectSprite: NSRect { sprite.frame.offsetBy(dx: frame.minX, dy: frame.minY) }
 
     /// Lugar donde el usuario dejó la mascota: los paseos salen de aquí y vuelven aquí.
     private(set) var casa = NSPoint.zero

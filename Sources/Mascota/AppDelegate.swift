@@ -1,4 +1,5 @@
 import AppKit
+import CoreGraphics
 import IOKit.ps
 import IOKit.pwr_mgt
 import MascotaCore
@@ -120,6 +121,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Qué mostrar en reposo: animación y tiempo, o una celda fija (mirar).
     private func vida(_ ahora: Date) -> (Animacion, TimeInterval, Celda?) {
         let reposo = (Animaciones.idle, ahora.timeIntervalSince(cambio), nil as Celda?)
+        // Caricias: vaivén del cursor sobre la mascota → saltito feliz con corazón.
+        let puntero = NSEvent.mouseLocation
+        if caricia.registrar(x: puntero.x, encima: panel.rectSprite.contains(puntero), t: ahora.timeIntervalSinceReferenceDate) {
+            cancelarAccion()
+            carinoHasta = ahora.addingTimeInterval(1.6)
+            panel.mostrarCorazon()
+        }
+        if let h = carinoHasta {
+            if ahora < h { return (Animaciones.jumping, 1.6 - h.timeIntervalSince(ahora), nil) }
+            carinoHasta = nil
+        }
+        // Saludo al volver tras un rato sin tocar la Mac.
+        let inactivo = Self.segundosInactivo()
+        if Saludo.debeSaludar(inactivoAntes: inactivoAntes, inactivoAhora: inactivo) {
+            cancelarAccion()
+            empezar(.saludar, ahora)
+        }
+        inactivoAntes = inactivo
         // Te mira si mueves el cursor cerca (solo si no está en medio de una travesura).
         let miradas = hoja()?.tieneMiradas ?? false
         let raton = NSEvent.mouseLocation
@@ -159,6 +178,54 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    // MARK: Avisos, No molestar, Things, caricias y saludo
+
+    let avisador = Avisador()
+    let things = ThingsHoy()
+    private var avisadas: Set<String> = []
+    private var ultimoThings = Date()
+    private var caricia = Caricia()
+    private var carinoHasta: Date?
+    private var inactivoAntes: TimeInterval = 0
+
+    var noMolestarHasta: Date? {
+        get { UserDefaults.standard.object(forKey: "noMolestarHasta") as? Date }
+        set { UserDefaults.standard.set(newValue, forKey: "noMolestarHasta") }
+    }
+    var noMolestar: Bool { NoMolestar.activo(hasta: noMolestarHasta, ahora: Date()) }
+
+    /// Activa No molestar: calla la voz (si estaba activa, se reactiva al terminar) y esconde el globo.
+    func activarNoMolestar(_ o: NoMolestar.Opcion) {
+        if ControlVoz.disponible, !ControlVoz.silenciada {
+            ControlVoz.silenciar(true)
+            UserDefaults.standard.set(true, forKey: "noMolestarVoz")
+        }
+        noMolestarHasta = NoMolestar.hasta(o, ahora: Date())
+    }
+
+    func desactivarNoMolestar() {
+        noMolestarHasta = nil
+        if UserDefaults.standard.bool(forKey: "noMolestarVoz") {
+            ControlVoz.silenciar(false)
+            UserDefaults.standard.set(false, forKey: "noMolestarVoz")
+        }
+    }
+
+    /// Notifica los permisos nuevos (si no estás ya en la terminal ni en No molestar).
+    private func revisarAvisos() {
+        let (nuevas, esperando) = Avisos.permisosNuevos(sesiones, yaAvisadas: avisadas)
+        avisador.retirar(Array(avisadas.subtracting(esperando)))
+        avisadas = esperando
+        let enTerminal = NSWorkspace.shared.frontmostApplication?.bundleIdentifier == "com.mitchellh.ghostty"
+        guard !noMolestar, !enTerminal else { return }
+        nuevas.forEach(avisador.avisar)
+    }
+
+    private static func segundosInactivo() -> TimeInterval {
+        let tipos: [CGEventType] = [.mouseMoved, .keyDown, .leftMouseDown, .scrollWheel]
+        return tipos.map { CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: $0) }.min() ?? 0
+    }
+
     private let abierta = Date()
     /// Al abrir la app se muestra unos segundos aunque no haya sesiones, para saber que está corriendo.
     private func visibleAlAbrir(_ ahora: Date) -> Bool { ahora.timeIntervalSince(abierta) < 10 }
@@ -178,6 +245,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.panel.guardarCasa()     // si iba a medio paseo, se queda donde lo agarraste
         }
         panel.alMoverUsuario = { [weak self] in self?.cancelarAccion() }
+        avisador.alTocar = { [weak self] clave in
+            guard let s = self?.sesiones.first(where: { "\($0.cli)-\($0.session)" == clave }) else { return }
+            EnfocarTerminal.ir(a: s)
+        }
+        avisador.pedirPermiso()
+        things.refrescar()
         catalogo = CatalogoMascotas.cargar(directorios: [
             raiz.appendingPathComponent("mascotas"),
             FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".codex/pets"),
@@ -235,6 +308,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             sesiones = vivas
             actualizarEnergia(ahora)
+            revisarAvisos()
+            if let h = noMolestarHasta, ahora >= h { desactivarNoMolestar() }
+            if ahora.timeIntervalSince(ultimoThings) >= 60 { ultimoThings = ahora; things.refrescar() }
         }
         let principal = Agregador.principal(sesiones, ahora: ahora)
         let estado = principal.map { Agregador.estadoEfectivo($0, ahora: ahora) }
@@ -261,7 +337,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.mostrarCuadro(h?.celda(fila: celda.fila, columna: celda.columna),
                             aireSuperior: h?.aireSuperior(fila: anim.fila) ?? 0)
 
-        let mostrarGlobo = principal != nil && (estado == .waiting || estado == .failed || desdeCambio < 6)
+        let mostrarGlobo = !noMolestar && principal != nil && (estado == .waiting || estado == .failed || desdeCambio < 6)
         panel.mostrarGlobo(mostrarGlobo ? Textos.chips(sesiones, ahora: ahora) : nil)
 
         let debe = Agregador.debeMostrarse(sesiones, ahora: ahora) && !ocultoManual

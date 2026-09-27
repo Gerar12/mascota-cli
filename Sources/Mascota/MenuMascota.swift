@@ -48,6 +48,52 @@ final class MenuMascota: NSObject, NSMenuDelegate {
             }))
         }
 
+        // Tu tarea de hoy en Things (solo si Things está abierto).
+        app.things.refrescar()
+        if let t = app.things.tarea {
+            let pendientes = app.things.pendientes > 1 ? " · \(app.things.pendientes) pendientes" : ""
+            let hoy = submenu("Hoy: \(t.nombre)", icono: "checklist", [
+                accion("Marcar como hecha", #selector(completarTarea), icono: "checkmark.circle"),
+                accion("Abrir en Things", #selector(abrirTarea), icono: "arrow.up.forward.app"),
+            ])
+            if #available(macOS 14.4, *), !pendientes.isEmpty { hoy.subtitle = "Things\(pendientes)" }
+            menu.addItem(hoy)
+        }
+
+        // No molestar: calla la voz, esconde el globo y los avisos por un rato.
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm"
+        let titulo = app.noMolestar ? "No molestar · hasta las \(f.string(from: app.noMolestarHasta!))" : "No molestar"
+        var opciones = [
+            opcionNoMolestar("30 minutos", .minutos(30)),
+            opcionNoMolestar("1 hora", .minutos(60)),
+            opcionNoMolestar("Hasta mañana (8:00)", .hastaManana),
+        ]
+        if app.noMolestar { opciones.append(accion("Desactivar", #selector(desactivarNoMolestar), icono: "bell")) }
+        let nm = submenu(titulo, icono: app.noMolestar ? "moon.fill" : "moon", opciones)
+        nm.state = app.noMolestar ? .on : .off
+        menu.addItem(nm)
+
+        // Cuotas de Claude y Codex.
+        let claude = LectorCuotas.claude(), codex = LectorCuotas.codex()
+        if claude != nil || codex != nil {
+            menu.addItem(.separator())
+            menu.addItem(.sectionHeader(title: "Cuota"))
+            if let c = claude {
+                let it = accion(c.titulo, #selector(nada), icono: "gauge.with.dots.needle.33percent")
+                if #available(macOS 14.4, *) {
+                    it.subtitle = "5 h: se reinicia a las \(f.string(from: c.cincoHoras.reinicio)) · semana: "
+                        + Cuota.fechaCorta(c.semana.reinicio)
+                }
+                menu.addItem(it)
+            }
+            if let x = codex {
+                let it = accion(x.titulo, #selector(nada), icono: "gauge.with.dots.needle.50percent")
+                if #available(macOS 14.4, *) { it.subtitle = x.detalle() }
+                menu.addItem(it)
+            }
+        }
+
         if ControlVoz.disponible {
             menu.addItem(.separator())
             menu.addItem(.sectionHeader(title: "Voz"))
@@ -168,6 +214,25 @@ final class MenuMascota: NSObject, NSMenuDelegate {
 
     @objc private func alternarVida() { app?.vidaPropia.toggle() }
 
+    private func opcionNoMolestar(_ titulo: String, _ o: NoMolestar.Opcion) -> NSMenuItem {
+        let it = accion(titulo, #selector(activarNoMolestar(_:)))
+        it.representedObject = CajaOpcion(o)
+        return it
+    }
+
+    @objc private func activarNoMolestar(_ it: NSMenuItem) {
+        guard let caja = it.representedObject as? CajaOpcion else { return }
+        app?.activarNoMolestar(caja.opcion)
+    }
+
+    @objc private func desactivarNoMolestar() { app?.desactivarNoMolestar() }
+
+    @objc private func completarTarea() { app?.things.completar() }
+
+    @objc private func abrirTarea() { app?.things.abrir() }
+
+    @objc private func nada() {}
+
     @objc private func alternarLogin() {
         do {
             if SMAppService.mainApp.status == .enabled { try SMAppService.mainApp.unregister() }
@@ -176,4 +241,10 @@ final class MenuMascota: NSObject, NSMenuDelegate {
     }
 
     @objc private func salir() { NSApp.terminate(nil) }
+}
+
+/// Envoltorio para guardar una opción de No molestar en `representedObject`.
+private final class CajaOpcion: NSObject {
+    let opcion: NoMolestar.Opcion
+    init(_ o: NoMolestar.Opcion) { opcion = o }
 }
