@@ -6,6 +6,18 @@ import ServiceManagement
 @MainActor
 final class MenuMascota: NSObject, NSMenuDelegate {
     let menu = NSMenu()
+    /// Elementos de Energía del menú actual, para cambiarlos en vivo si se conecta o desconecta el cargador.
+    private var energia: (encabezado: NSMenuItem, opciones: [NSMenuItem])?
+
+    /// Sin cargador las opciones no se pueden tocar (conservan su ✓ para reactivarse al conectarlo).
+    func actualizarEnergia(conCargador: Bool) {
+        guard let energia else { return }
+        energia.encabezado.title = Energia.titulo(conCargador: conCargador)
+        for it in energia.opciones {
+            it.isEnabled = conCargador
+            if #available(macOS 14.4, *) { it.subtitle = conCargador ? nil : "Conecta el cargador para usarlo" }
+        }
+    }
     weak var app: AppDelegate?
 
     override init() {
@@ -54,8 +66,8 @@ final class MenuMascota: NSObject, NSMenuDelegate {
         }
 
         menu.addItem(.separator())
-        let cargador = app.conCargador
-        menu.addItem(.sectionHeader(title: Energia.titulo(conCargador: cargador)))
+        let encabezado = NSMenuItem.sectionHeader(title: "Energía")
+        menu.addItem(encabezado)
         let trabajo = accion("Despierta mientras trabajan", #selector(alternarEnergiaTrabajo), icono: "cup.and.saucer")
         trabajo.state = app.despiertaMientrasTrabajan ? .on : .off
         trabajo.toolTip = "Con el cargador conectado, la Mac no entra en reposo mientras Claude o Codex trabajan (y 15 min después). La pantalla sí se apaga."
@@ -64,13 +76,8 @@ final class MenuMascota: NSObject, NSMenuDelegate {
         siempre.state = app.despiertaSiempre ? .on : .off
         siempre.toolTip = "Con el cargador conectado, la Mac no entra en reposo hasta que lo apagues. Con batería no hace nada. La pantalla sí se apaga; cerrar la tapa la duerme igual."
         menu.addItem(siempre)
-        if !cargador {
-            // Sin cargador no se pueden tocar; conservan su ✓ para reactivarse al conectarlo.
-            for it in [trabajo, siempre] {
-                it.isEnabled = false
-                if #available(macOS 14.4, *) { it.subtitle = "Conecta el cargador para usarlo" }
-            }
-        }
+        energia = (encabezado, [trabajo, siempre])
+        actualizarEnergia(conCargador: app.conCargador)
 
         menu.addItem(.separator())
         menu.addItem(.sectionHeader(title: "Apariencia"))

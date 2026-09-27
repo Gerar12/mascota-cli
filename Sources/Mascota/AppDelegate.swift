@@ -41,6 +41,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let vigiliaSiempre = Vigilia(tipo: kIOPMAssertionTypePreventSystemSleep,
                                          motivo: "Mascota: mantener despierta siempre")
     private var ultimaVezTrabajando: Date?
+    private var ultimoCargador: Bool?
 
     var despiertaMientrasTrabajan: Bool {
         get { UserDefaults.standard.object(forKey: "energia.trabajo") as? Bool ?? true }
@@ -62,6 +63,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let trabajando = Energia.hayTrabajo(sesiones, ahora: ahora)
         if trabajando { ultimaVezTrabajando = ahora }
         let cargador = conCargador
+        if cargador != ultimoCargador {
+            ultimoCargador = cargador
+            menu.actualizarEnergia(conCargador: cargador)     // también con el menú abierto
+        }
         vigiliaTrabajo.poner(Energia.activa(preferencia: despiertaMientrasTrabajan, conCargador: cargador)
             && Energia.mantenerDespierta(trabajando: trabajando, ultimaVezTrabajando: ultimaVezTrabajando, ahora: ahora))
         vigiliaSiempre.poner(Energia.activa(preferencia: despiertaSiempre, conCargador: cargador))
@@ -83,9 +88,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             raiz.appendingPathComponent("mascotas"),
             FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".codex/pets"),
         ])
-        Timer.scheduledTimer(withTimeInterval: 1.0 / 20, repeats: true) { [weak self] _ in
+        // En modo .common el reloj sigue con el menú abierto (si no, macOS lo pausa).
+        let reloj = Timer(timeInterval: 1.0 / 20, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.tick() }
         }
+        RunLoop.main.add(reloj, forMode: .common)
         panel.orderFrontRegardless()
         tick()
     }
