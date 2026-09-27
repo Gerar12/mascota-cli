@@ -10,9 +10,11 @@ public struct Sesion: Codable, Equatable, Sendable {
     public let project: String
     public let state: EstadoAgente
     public let ts: TimeInterval
+    /// Proceso `claude` o `codex` de la terminal; nil si el hook no lo encontró.
+    public let pid: Int32?
 
-    public init(cli: String, session: String, project: String, state: EstadoAgente, ts: TimeInterval) {
-        self.cli = cli; self.session = session; self.project = project; self.state = state; self.ts = ts
+    public init(cli: String, session: String, project: String, state: EstadoAgente, ts: TimeInterval, pid: Int32? = nil) {
+        self.cli = cli; self.session = session; self.project = project; self.state = state; self.ts = ts; self.pid = pid
     }
 
     public var nombreCLI: String { cli == "codex" ? "Codex" : "Claude" }

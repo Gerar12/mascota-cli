@@ -73,5 +73,13 @@ check('error de escritura silencioso', unwritable)
 assert not errors, errors
 PY
 
+# Anota el pid del proceso claude/codex más cercano hacia arriba en la cadena de procesos.
+falso=$(mktemp -d); ln -s /bin/sh "$falso/claude"
+"$falso/claude" -c 'printf "{\"hook_event_name\":\"Stop\",\"session_id\":\"p1\",\"cwd\":\"/a\"}" | "$1" claude; echo $$ > "$2"; true' _ "$HOOK" "$falso/pid"
+revisar claude-p1.json pid "$(cat "$falso/pid")"
+evento claude Stop p2
+[ -z "$(plutil -extract pid raw -o - "$MASCOTA_DIR/estado/claude-p2.json" 2>/dev/null)" ] || { echo "FALLA: pid sin proceso claude"; fallos=$((fallos+1)); }
+rm -rf "$falso"
+
 rm -rf "$MASCOTA_DIR"
 [ $fallos -eq 0 ] && echo "OK pet-hook" || exit 1

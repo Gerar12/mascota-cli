@@ -3,8 +3,8 @@ import Testing
 @testable import MascotaCore
 
 private let t0: TimeInterval = 1_790_000_000
-private func s(_ id: String, _ e: EstadoAgente, hace: TimeInterval, cli: String = "claude") -> Sesion {
-    Sesion(cli: cli, session: id, project: "p", state: e, ts: t0 - hace)
+private func s(_ id: String, _ e: EstadoAgente, hace: TimeInterval, cli: String = "claude", pid: Int32? = nil) -> Sesion {
+    Sesion(cli: cli, session: id, project: "p", state: e, ts: t0 - hace, pid: pid)
 }
 private let ahora = Date(timeIntervalSince1970: t0)
 
@@ -34,5 +34,20 @@ private let ahora = Date(timeIntervalSince1970: t0)
     #expect(Agregador.debeMostrarse([], ahora: ahora) == false)
     #expect(Agregador.debeMostrarse([s("a", .running, hace: 600)], ahora: ahora))
     #expect(Agregador.debeMostrarse([s("a", .done, hace: 60)], ahora: ahora))
-    #expect(Agregador.debeMostrarse([s("a", .done, hace: 181)], ahora: ahora) == false)
+    // Opción A: visible mientras haya una sesión abierta, aunque esté en reposo.
+    #expect(Agregador.debeMostrarse([s("a", .done, hace: 181)], ahora: ahora))
+    #expect(Agregador.debeMostrarse([s("a", .done, hace: 31 * 60)], ahora: ahora) == false)
+}
+
+@Test func conPidNoCaducaPorTiempo() {
+    let lista = [s("a", .done, hace: 5 * 3600, pid: 10)]
+    #expect(Agregador.vigentes(lista, ahora: ahora).count == 1)
+    #expect(Agregador.debeMostrarse(lista, ahora: ahora))
+}
+
+@Test func quitaSesionesDeProcesosMuertos() {
+    let lista = [s("viva", .running, hace: 1, pid: 10), s("muerta", .running, hace: 1, pid: 20), s("sinpid", .done, hace: 1)]
+    let (vivas, muertas) = Agregador.separarPorProceso(lista) { $0 == 10 }
+    #expect(vivas.map(\.session) == ["viva", "sinpid"])
+    #expect(muertas.map(\.session) == ["muerta"])
 }

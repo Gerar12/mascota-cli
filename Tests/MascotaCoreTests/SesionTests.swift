@@ -19,3 +19,9 @@ import Testing
 @Test func directorioInexistenteDevuelveVacio() {
     #expect(LectorEstado.leer(directorio: URL(fileURLWithPath: "/no/existe")) == [])
 }
+
+@Test func leeElPidCuandoViene() throws {
+    let json = #"{"cli":"codex","session":"b","project":"p","state":"done","ts":1,"pid":4321}"#
+    let s = try JSONDecoder().decode(Sesion.self, from: Data(json.utf8))
+    #expect(s.pid == 4321)
+}

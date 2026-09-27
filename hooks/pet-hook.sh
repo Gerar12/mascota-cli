@@ -37,10 +37,18 @@ proyecto=$(printf '%s.' "${proyecto:-?}" | LC_ALL=C awk '
     }
   }')
 proyecto=${proyecto%.}
+# Proceso claude/codex dueño de la sesión (padre o abuelo del hook): la app lo vigila para
+# quitar la sesión cuando se cierra la terminal.
+pid=; p=$PPID; n=0
+while [ -n "$p" ] && [ "$p" -gt 1 ] && [ $n -lt 2 ]; do
+  nombre=$(ps -o comm= -p "$p") || break
+  case "${nombre##*/}" in claude|codex) pid=$p; break ;; esac
+  p=$(ps -o ppid= -p "$p" | tr -d ' '); n=$((n+1))
+done
 mkdir -p "$dir" || exit 0
 tmp=$(mktemp "$dir/.$cli-$sesion.XXXXXX") || exit 0
 trap 'rm -f "$tmp"' EXIT
-printf '{"cli":"%s","session":"%s","project":"%s","state":"%s","ts":%s}\n' \
-  "$cli" "$sesion" "$proyecto" "$estado" "$(date +%s)" > "$tmp" \
+printf '{"cli":"%s","session":"%s","project":"%s","state":"%s","ts":%s%s}\n' \
+  "$cli" "$sesion" "$proyecto" "$estado" "$(date +%s)" "${pid:+,\"pid\":$pid}" > "$tmp" \
   && mv -f "$tmp" "$archivo"
 exit 0

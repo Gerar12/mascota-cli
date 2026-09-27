@@ -39,7 +39,8 @@ final class PanelMascota: NSPanel {
         isOpaque = false
         backgroundColor = .clear
         hasShadow = false
-        level = .floating
+        // Por encima de la barra de menú, como la mascota de ChatGPT.
+        level = .statusBar
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         isMovableByWindowBackground = false
         hidesOnDeactivate = false
@@ -83,6 +84,9 @@ final class PanelMascota: NSPanel {
     }
 
     override var canBecomeKey: Bool { false }
+
+    /// Sin esto macOS empuja la ventana debajo de la barra de menú al arrastrarla hacia arriba.
+    override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect { frameRect }
 
     func mostrarCuadro(_ imagen: CGImage?) { sprite.layer?.contents = imagen }
 

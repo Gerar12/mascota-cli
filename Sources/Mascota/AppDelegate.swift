@@ -69,7 +69,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let ahora = Date()
         if ahora.timeIntervalSince(ultimoSondeo) >= 0.5 {
             ultimoSondeo = ahora
-            sesiones = LectorEstado.leer(directorio: raiz.appendingPathComponent("estado"))
+            let dir = raiz.appendingPathComponent("estado")
+            // Terminal cerrada sin SessionEnd: el proceso ya no existe, se olvida la sesión.
+            let (vivas, muertas) = Agregador.separarPorProceso(LectorEstado.leer(directorio: dir)) { pid in
+                kill(pid, 0) == 0 || errno == EPERM
+            }
+            for s in muertas {
+                try? FileManager.default.removeItem(at: dir.appendingPathComponent("\(s.cli)-\(s.session).json"))
+            }
+            sesiones = vivas
         }
         let principal = Agregador.principal(sesiones, ahora: ahora)
         let estado = principal.map { Agregador.estadoEfectivo($0, ahora: ahora) }

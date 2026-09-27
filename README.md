@@ -27,7 +27,7 @@ Cualquier mascota con el formato de Codex v2 (`pet.json` + hoja de sprites de 15
 
 ## Cómo funciona
 
-`hooks/pet-hook.sh` escribe `~/.mascota/estado/<cli>-<sesión>.json` en cada evento; la app lo lee cada 0,5 s y muestra el estado más urgente (permiso > error > trabajando > terminó). Se oculta sola tras 3 min sin trabajo.
+`hooks/pet-hook.sh` escribe `~/.mascota/estado/<cli>-<sesión>.json` en cada evento; la app lo lee cada 0,5 s y muestra el estado más urgente (permiso > error > trabajando > terminó). El hook anota el pid del proceso `claude`/`codex`: al cerrar una terminal su ícono desaparece, y al cerrar la última se oculta la mascota.
 
 ## Desarrollo
 
