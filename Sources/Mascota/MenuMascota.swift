@@ -16,66 +16,86 @@ final class MenuMascota: NSObject, NSMenuDelegate {
     func menuNeedsUpdate(_ menu: NSMenu) {
         guard let app else { return }
         menu.removeAllItems()
-        menu.addItem(accion("Ocultar mascota", #selector(ocultar)))
-        menu.addItem(.separator())
 
+        menu.addItem(.sectionHeader(title: "Sesiones"))
         let ahora = Date()
         let sesiones = Agregador.vigentes(app.sesiones, ahora: ahora)
         if sesiones.isEmpty {
-            menu.addItem(NSMenuItem(title: "Sin sesiones activas", action: nil, keyEquivalent: ""))
+            menu.addItem(accion("Sin sesiones abiertas", nil, icono: "moon.zzz"))
         }
-        for s in sesiones.sorted(by: { $0.ts > $1.ts }) {
-            menu.addItem(NSMenuItem(title: Textos.globo(s, estado: Agregador.estadoEfectivo(s, ahora: ahora)),
-                                    action: nil, keyEquivalent: ""))
+        for s in sesiones.sorted(by: { ($0.cli, $1.ts) < ($1.cli, $0.ts) }) {
+            let estado = Agregador.estadoEfectivo(s, ahora: ahora)
+            let it = accion(s.project, #selector(nada), icono: Self.iconoEstado(estado))
+            let detalle = "\(s.nombreCLI) · \(Textos.verbo(estado))"
+            if #available(macOS 14.4, *) { it.subtitle = detalle } else { it.title = "\(s.project) — \(detalle)" }
+            menu.addItem(it)
         }
+
+        if ControlVoz.disponible {
+            menu.addItem(.separator())
+            menu.addItem(.sectionHeader(title: "Voz"))
+            let leer = accion("Leer respuestas", #selector(alternarVoz), icono: "speaker.wave.2")
+            leer.state = ControlVoz.silenciada ? .off : .on
+            menu.addItem(leer)
+            menu.addItem(submenu("Voz", icono: "waveform", Voz.proveedores.map { p in
+                let it = accion(p.nombre, #selector(elegirVoz(_:)))
+                it.representedObject = p.id
+                it.state = ControlVoz.proveedor == p.id ? .on : .off
+                return it
+            }))
+            menu.addItem(accion("Repetir lo último", #selector(repetir), icono: "arrow.counterclockwise"))
+            menu.addItem(accion("Callar ahora", #selector(callar), icono: "stop.fill"))
+        }
+
         menu.addItem(.separator())
-        let sub = NSMenu()
-        for m in app.catalogo {
+        menu.addItem(.sectionHeader(title: "Apariencia"))
+        menu.addItem(submenu("Mascota", icono: "pawprint", app.catalogo.map { m in
             let it = accion(m.nombre, #selector(elegirMascota(_:)))
             it.representedObject = m.id
             it.state = app.mascotaId == m.id ? .on : .off
-            sub.addItem(it)
-        }
-        let raiz = NSMenuItem(title: "Mascota", action: nil, keyEquivalent: "")
-        raiz.submenu = sub
-        menu.addItem(raiz)
-        if ControlVoz.disponible {
-            let silenciada = ControlVoz.silenciada
-            menu.addItem(accion(silenciada ? "🔇 Voz silenciada · Activar" : "🔊 Silenciar voz", #selector(alternarVoz)))
-            let voces = NSMenu()
-            for (id, nombre) in Voz.proveedores {
-                let it = accion(nombre, #selector(elegirVoz(_:)))
-                it.representedObject = id
-                it.state = ControlVoz.proveedor == id ? .on : .off
-                voces.addItem(it)
-            }
-            let raizVoz = NSMenuItem(title: "Voz de lectura", action: nil, keyEquivalent: "")
-            raizVoz.submenu = voces
-            menu.addItem(raizVoz)
-            menu.addItem(accion("Repetir lo último", #selector(repetir)))
-            menu.addItem(accion("Callar ahora", #selector(callar)))
-            menu.addItem(.separator())
-        }
-        let tam = NSMenu()
-        for (nombre, ancho) in PanelMascota.tamanos {
-            let it = accion(nombre, #selector(elegirTamano(_:)))
-            it.representedObject = ancho
-            it.state = app.panel.anchoSprite == ancho ? .on : .off
-            tam.addItem(it)
-        }
-        let raizTam = NSMenuItem(title: "Tamaño", action: nil, keyEquivalent: "")
-        raizTam.submenu = tam
-        menu.addItem(raizTam)
-        let login = accion("Abrir al iniciar sesión", #selector(alternarLogin))
+            return it
+        }))
+        menu.addItem(submenu("Tamaño", icono: "arrow.up.left.and.arrow.down.right", PanelMascota.tamanos.map { t in
+            let it = accion(t.nombre, #selector(elegirTamano(_:)))
+            it.representedObject = t.ancho
+            it.state = app.panel.anchoSprite == t.ancho ? .on : .off
+            return it
+        }))
+        menu.addItem(accion("Ocultar mascota", #selector(ocultar), icono: "eye.slash"))
+
+        menu.addItem(.separator())
+        let login = accion("Abrir al iniciar sesión", #selector(alternarLogin), icono: "power")
         login.state = SMAppService.mainApp.status == .enabled ? .on : .off
         menu.addItem(login)
-        menu.addItem(.separator())
-        menu.addItem(accion("Salir", #selector(salir)))
+        let salir = accion("Salir de Mascota", #selector(salir))
+        salir.keyEquivalent = "q"
+        menu.addItem(salir)
     }
 
-    private func accion(_ titulo: String, _ sel: Selector) -> NSMenuItem {
+    private static func iconoEstado(_ e: EstadoAgente) -> String {
+        switch e {
+        case .running: "ellipsis.circle"
+        case .waiting: "hand.raised"
+        case .done: "checkmark.circle"
+        case .failed: "exclamationmark.triangle"
+        }
+    }
+
+    private func submenu(_ titulo: String, icono: String, _ items: [NSMenuItem]) -> NSMenuItem {
+        let raiz = NSMenuItem(title: titulo, action: nil, keyEquivalent: "")
+        raiz.image = NSImage(systemSymbolName: icono, accessibilityDescription: nil)
+        let sub = NSMenu()
+        items.forEach(sub.addItem)
+        raiz.submenu = sub
+        return raiz
+    }
+
+    @objc private func nada() {}
+
+    private func accion(_ titulo: String, _ sel: Selector?, icono: String? = nil) -> NSMenuItem {
         let it = NSMenuItem(title: titulo, action: sel, keyEquivalent: "")
         it.target = self
+        if let icono { it.image = NSImage(systemSymbolName: icono, accessibilityDescription: nil) }
         return it
     }
 

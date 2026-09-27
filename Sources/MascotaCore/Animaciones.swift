@@ -41,14 +41,17 @@ public enum Animaciones {
 }
 
 public enum Textos {
-    public static func globo(_ s: Sesion, estado: EstadoAgente) -> String {
-        let verbo = switch estado {
+    public static func verbo(_ estado: EstadoAgente) -> String {
+        switch estado {
         case .running: "trabajando"
         case .waiting: "necesita permiso"
         case .done: "terminó"
         case .failed: "falló"
         }
-        return "\(s.nombreCLI) \(verbo) · \(s.project)"
+    }
+
+    public static func globo(_ s: Sesion, estado: EstadoAgente) -> String {
+        "\(s.nombreCLI) \(verbo(estado)) · \(s.project)"
     }
 }
 
