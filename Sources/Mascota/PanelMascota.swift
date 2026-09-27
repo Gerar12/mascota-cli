@@ -4,6 +4,7 @@ import MascotaCore
 /// Vista de la mascota: arrastrar mueve la ventana; un clic sin arrastrar abre el menú.
 final class VistaSprite: NSView {
     var alHacerClic: ((NSEvent) -> Void)?
+    var alTerminarArrastre: (() -> Void)?
     private var arrastro = false
 
     override var mouseDownCanMoveWindow: Bool { false }
@@ -14,7 +15,8 @@ final class VistaSprite: NSView {
     override func mouseDragged(with event: NSEvent) {
         guard !arrastro else { return }
         arrastro = true
-        window?.performDrag(with: event)
+        window?.performDrag(with: event)      // bloquea hasta soltar el mouse
+        alTerminarArrastre?()
     }
 
     override func mouseUp(with event: NSEvent) {
@@ -59,7 +61,6 @@ final class PanelMascota: NSPanel {
         if !setFrameUsingName("MascotaPanel"), let pantalla = NSScreen.main?.visibleFrame {
             setFrameOrigin(NSPoint(x: pantalla.maxX - 240, y: pantalla.maxY - 140))
         }
-        setFrameAutosaveName("MascotaPanel")
         let guardado = CGFloat(UserDefaults.standard.double(forKey: "tamano"))
         cambiarTamano(guardado > 0 ? guardado : 80)
     }
@@ -75,6 +76,22 @@ final class PanelMascota: NSPanel {
         contentView?.frame = NSRect(origin: .zero, size: tamPanel)
         sprite.frame = NSRect(x: ((tamPanel.width - t.width) / 2).rounded(), y: 0, width: t.width, height: t.height)
         if !globo.isHidden { colocarGlobo() }
+        guardarCasa()
+    }
+
+    /// Lugar donde el usuario dejó la mascota: los paseos salen de aquí y vuelven aquí.
+    private(set) var casa = NSPoint.zero
+    var altoSprite: CGFloat { tamSprite.height }
+
+    func guardarCasa() {
+        casa = frame.origin
+        saveFrame(usingName: "MascotaPanel")
+    }
+
+    /// Mueve la ventana a `dx` puntos de su casa (paseos); 0 = en casa.
+    func ponerDesplazamiento(_ dx: CGFloat) {
+        let destino = NSPoint(x: (casa.x + dx).rounded(), y: casa.y)
+        if frame.origin != destino { setFrameOrigin(destino) }
     }
 
     private func colocarGlobo() {

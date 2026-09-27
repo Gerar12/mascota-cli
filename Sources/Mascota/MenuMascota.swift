@@ -94,6 +94,10 @@ final class MenuMascota: NSObject, NSMenuDelegate {
             it.state = app.panel.anchoSprite == t.ancho ? .on : .off
             return it
         }))
+        let vida = accion("Vida propia", #selector(alternarVida), icono: "sparkles")
+        vida.state = app.vidaPropia ? .on : .off
+        vida.toolTip = "Cuando nadie trabaja: te mira, pasea un poquito y hace travesuras."
+        menu.addItem(vida)
         menu.addItem(accion("Ocultar mascota", #selector(ocultar), icono: "eye.slash"))
 
         menu.addItem(.separator())
@@ -144,7 +148,7 @@ final class MenuMascota: NSObject, NSMenuDelegate {
 
     @objc private func elegirTamano(_ it: NSMenuItem) {
         guard let ancho = it.representedObject as? CGFloat else { return }
-        app?.panel.cambiarTamano(ancho)
+        app?.cambiarTamano(ancho)
     }
 
     @objc private func alternarVoz() { ControlVoz.silenciar(!ControlVoz.silenciada) }
@@ -161,6 +165,8 @@ final class MenuMascota: NSObject, NSMenuDelegate {
     @objc private func alternarEnergiaTrabajo() { app?.despiertaMientrasTrabajan.toggle() }
 
     @objc private func alternarEnergiaSiempre() { app?.despiertaSiempre.toggle() }
+
+    @objc private func alternarVida() { app?.vidaPropia.toggle() }
 
     @objc private func alternarLogin() {
         do {

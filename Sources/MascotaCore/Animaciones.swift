@@ -12,6 +12,8 @@ public enum Animaciones {
     }
 
     public static let idle = Animacion(fila: 0, duraciones: [0.28, 0.11, 0.11, 0.14, 0.14, 0.32])
+    public static let caminarDerecha = fila(1, 8, cada: 0.12, ultimo: 0.22)
+    public static let caminarIzquierda = fila(2, 8, cada: 0.12, ultimo: 0.22)
     public static let waving = fila(3, 4, cada: 0.14, ultimo: 0.28)
     public static let jumping = fila(4, 5, cada: 0.14, ultimo: 0.28)
     public static let failed = fila(5, 8, cada: 0.14, ultimo: 0.24)

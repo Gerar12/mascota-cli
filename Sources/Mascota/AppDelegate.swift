@@ -72,6 +72,87 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         vigiliaSiempre.poner(Energia.activa(preferencia: despiertaSiempre, conCargador: cargador))
     }
 
+    // MARK: Vida propia (cuando nadie trabaja)
+
+    var vidaPropia: Bool {
+        get { UserDefaults.standard.object(forKey: "vidaPropia") as? Bool ?? true }
+        set {
+            UserDefaults.standard.set(newValue, forKey: "vidaPropia")
+            if !newValue { terminarAccion(Date()) }
+        }
+    }
+    private var accion: AccionReposo?
+    private var inicioAccion = Date()
+    private var proximaAccion = Date().addingTimeInterval(Reposo.espera(.random(in: 0..<1)))
+    private var ultimoRaton = NSPoint.zero
+    private var ratonMovido = Date.distantPast
+
+    func cambiarTamano(_ ancho: CGFloat) {
+        terminarAccion(Date())
+        panel.cambiarTamano(ancho)
+    }
+
+    /// Termina la travesura en curso, regresa a casa y agenda la siguiente.
+    private func terminarAccion(_ ahora: Date) {
+        guard accion != nil else { return }
+        accion = nil
+        panel.ponerDesplazamiento(0)
+        proximaAccion = ahora.addingTimeInterval(Reposo.espera(.random(in: 0..<1)))
+    }
+
+    private func empezar(_ a: AccionReposo, _ ahora: Date) {
+        var a = a
+        // Si el paseo se saldría de la pantalla, va hacia el otro lado.
+        if case .pasear(let dx) = a, let pantalla = panel.screen?.visibleFrame {
+            let x = panel.casa.x + dx
+            if x < pantalla.minX || x + panel.frame.width > pantalla.maxX { a = .pasear(dx: -dx) }
+        }
+        accion = a
+        inicioAccion = ahora
+    }
+
+    /// Qué mostrar en reposo: animación y tiempo, o una celda fija (mirar).
+    private func vida(_ ahora: Date) -> (Animacion, TimeInterval, Celda?) {
+        let reposo = (Animaciones.idle, ahora.timeIntervalSince(cambio), nil as Celda?)
+        // Te mira si mueves el cursor cerca (solo si no está en medio de una travesura).
+        let miradas = hoja()?.tieneMiradas ?? false
+        let raton = NSEvent.mouseLocation
+        if raton != ultimoRaton { ultimoRaton = raton; ratonMovido = ahora }
+        if miradas, accion == nil, ahora.timeIntervalSince(ratonMovido) < 2.5 {
+            let dx = raton.x - panel.frame.midX
+            let dy = raton.y - (panel.frame.minY + panel.altoSprite / 2)
+            if (dx * dx + dy * dy).squareRoot() < 350, let c = Mirada.celda(dx: dx, dy: dy) {
+                return (Animaciones.idle, 0, c)
+            }
+        }
+        if accion == nil, ahora >= proximaAccion {
+            let a = Reposo.elegir(.random(in: 0..<1), .random(in: 0..<1))
+            empezar(a == .mirarAlrededor && !miradas ? .saludar : a, ahora)
+        }
+        guard let a = accion else { return reposo }
+        let t = ahora.timeIntervalSince(inicioAccion)
+        if t >= Reposo.duracion(a) { terminarAccion(ahora); return reposo }
+        switch a {
+        case .descansar:
+            return reposo
+        case .saltar:
+            return (Animaciones.jumping, t, nil)
+        case .saludar:
+            return (Animaciones.waving, t, nil)
+        case .mirarAlrededor:
+            let i = min(15, Int(t / Reposo.cuadroMirada))
+            return (Animaciones.idle, 0, Celda(fila: 9 + i / 8, columna: i % 8))
+        case .pasear(let dx):
+            guard let paso = Reposo.paseo(dx: dx, t: t) else { terminarAccion(ahora); return reposo }
+            panel.ponerDesplazamiento(paso.desplazamiento)
+            switch paso.fila {
+            case 1: return (Animaciones.caminarDerecha, t, nil)
+            case 2: return (Animaciones.caminarIzquierda, t, nil)
+            default: return reposo
+            }
+        }
+    }
+
     private let abierta = Date()
     /// Al abrir la app se muestra unos segundos aunque no haya sesiones, para saber que está corriendo.
     private func visibleAlAbrir(_ ahora: Date) -> Bool { ahora.timeIntervalSince(abierta) < 10 }
@@ -83,6 +164,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.sprite.alHacerClic = { [weak self] evento in
             guard let self else { return }
             NSMenu.popUpContextMenu(self.menu.menu, with: evento, for: self.panel.sprite)
+        }
+        // Arrastrarla le da una casa nueva (y corta el paseo en curso sin regresarla).
+        panel.sprite.alTerminarArrastre = { [weak self] in
+            guard let self else { return }
+            self.accion = nil
+            self.panel.guardarCasa()
         }
         catalogo = CatalogoMascotas.cargar(directorios: [
             raiz.appendingPathComponent("mascotas"),
@@ -153,10 +240,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         let desdeCambio = ahora.timeIntervalSince(cambio)
 
-        let anim = Animaciones.para(estado: estado, desdeCambio: desdeCambio)
+        var anim = Animaciones.para(estado: estado, desdeCambio: desdeCambio)
+        var tiempo = desdeCambio
+        var fija: Celda?
+        let enReposo = estado == nil || (estado == .done && desdeCambio >= Animaciones.waving.total * 2)
+        if enReposo && vidaPropia {
+            (anim, tiempo, fija) = vida(ahora)
+        } else {
+            terminarAccion(ahora)          // a trabajar: deja la travesura y vuelve a casa
+        }
         let h = hoja()
-        let cuadro = h?.celda(fila: anim.fila, columna: Animaciones.cuadro(anim, tiempo: desdeCambio))
-        panel.mostrarCuadro(cuadro, aireSuperior: h?.aireSuperior(fila: anim.fila) ?? 0)
+        let celda = fija ?? Celda(fila: anim.fila, columna: Animaciones.cuadro(anim, tiempo: tiempo))
+        panel.mostrarCuadro(h?.celda(fila: celda.fila, columna: celda.columna),
+                            aireSuperior: h?.aireSuperior(fila: anim.fila) ?? 0)
 
         let mostrarGlobo = principal != nil && (estado == .waiting || estado == .failed || desdeCambio < 6)
         panel.mostrarGlobo(mostrarGlobo ? Textos.chips(sesiones, ahora: ahora) : nil)

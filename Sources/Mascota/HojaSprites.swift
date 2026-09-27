@@ -7,6 +7,8 @@ final class HojaSprites {
     private let imagen: CGImage
     private var cache: [Int: CGImage] = [:]
     private var aires: [Int: CGFloat] = [:]
+    /// Las hojas v2 (11 filas) traen las 16 miradas; las v1 (9 filas) no.
+    var tieneMiradas: Bool { imagen.height >= Self.alto * 11 }
 
     init?(url: URL) {
         guard let img = NSImage(contentsOf: url),
