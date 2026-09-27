@@ -11,3 +11,15 @@ import Testing
     #expect(Procesos.hayCodexConTerminal(salidaPs: " ttys002 /Users/x/.local/bin/codex"))
     #expect(Procesos.hayCodexConTerminal(salidaPs: "ttys003  codex-code-mode-host") == false)
 }
+
+@Test func detectaVozSonando() {
+    #expect(Procesos.hayVozSonando(salidaPs: "??       afplay\nttys001  codex"))
+    #expect(Procesos.hayVozSonando(salidaPs: "??       /usr/bin/say"))
+    #expect(Procesos.hayVozSonando(salidaPs: "ttys001  codex\n??  sayhello") == false)
+}
+
+@Test func estadoDeVoz() {
+    #expect(Voz.estado(silenciada: true, sonando: true) == .silenciada)
+    #expect(Voz.estado(silenciada: false, sonando: true) == .hablando)
+    #expect(Voz.estado(silenciada: false, sonando: false) == .normal)
+}

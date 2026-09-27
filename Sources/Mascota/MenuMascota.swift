@@ -39,6 +39,23 @@ final class MenuMascota: NSObject, NSMenuDelegate {
         let raiz = NSMenuItem(title: "Mascota", action: nil, keyEquivalent: "")
         raiz.submenu = sub
         menu.addItem(raiz)
+        if ControlVoz.disponible {
+            let silenciada = ControlVoz.silenciada
+            menu.addItem(accion(silenciada ? "🔇 Voz silenciada · Activar" : "🔊 Silenciar voz", #selector(alternarVoz)))
+            let voces = NSMenu()
+            for (id, nombre) in Voz.proveedores {
+                let it = accion(nombre, #selector(elegirVoz(_:)))
+                it.representedObject = id
+                it.state = ControlVoz.proveedor == id ? .on : .off
+                voces.addItem(it)
+            }
+            let raizVoz = NSMenuItem(title: "Voz de lectura", action: nil, keyEquivalent: "")
+            raizVoz.submenu = voces
+            menu.addItem(raizVoz)
+            menu.addItem(accion("Repetir lo último", #selector(repetir)))
+            menu.addItem(accion("Callar ahora", #selector(callar)))
+            menu.addItem(.separator())
+        }
         let tam = NSMenu()
         for (nombre, ancho) in PanelMascota.tamanos {
             let it = accion(nombre, #selector(elegirTamano(_:)))
@@ -73,6 +90,17 @@ final class MenuMascota: NSObject, NSMenuDelegate {
         guard let ancho = it.representedObject as? CGFloat else { return }
         app?.panel.cambiarTamano(ancho)
     }
+
+    @objc private func alternarVoz() { ControlVoz.silenciar(!ControlVoz.silenciada) }
+
+    @objc private func elegirVoz(_ it: NSMenuItem) {
+        guard let id = it.representedObject as? String else { return }
+        ControlVoz.elegir(proveedor: id)
+    }
+
+    @objc private func repetir() { ControlVoz.repetirUltimo() }
+
+    @objc private func callar() { ControlVoz.callar() }
 
     @objc private func alternarLogin() {
         do {

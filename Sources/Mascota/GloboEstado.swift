@@ -9,6 +9,7 @@ final class GloboEstado: NSView {
     private let fondo = NSVisualEffectView()
     private let pila = NSStackView()
     private var actuales: [Chip] = []
+    private var vozActual: EstadoVoz?
 
     init() {
         super.init(frame: .zero)
@@ -31,17 +32,34 @@ final class GloboEstado: NSView {
     required init?(coder: NSCoder) { fatalError("no se usa") }
 
     /// Rehace los indicadores solo si cambiaron, para no reiniciar sus animaciones.
-    func mostrar(_ chips: [Chip]) {
-        guard chips != actuales else { return }
+    func mostrar(_ chips: [Chip], voz: EstadoVoz?) {
+        guard chips != actuales || voz != vozActual else { return }
         actuales = chips
+        vozActual = voz
         pila.arrangedSubviews.forEach { $0.removeFromSuperview() }
-        for (i, chip) in chips.enumerated() {
+        var vistas = chips.map(Self.vista)
+        if let v = Self.vistaVoz(voz) { vistas.append(v) }
+        for (i, v) in vistas.enumerated() {
             if i > 0 { pila.addArrangedSubview(Self.separador()) }
-            pila.addArrangedSubview(Self.vista(chip))
+            pila.addArrangedSubview(v)
         }
         frame.size = NSSize(width: pila.fittingSize.width, height: Self.alto)
         fondo.frame = bounds
         pila.frame = bounds
+    }
+
+    /// Bocina animada mientras el lector de voz habla; tachada y tenue si está silenciado.
+    private static func vistaVoz(_ voz: EstadoVoz?) -> NSView? {
+        switch voz {
+        case .hablando:
+            let v = simbolo("speaker.wave.2.fill", .white)
+            v.addSymbolEffect(.variableColor.iterative, options: .repeating)
+            return v
+        case .silenciada:
+            return simbolo("speaker.slash.fill", NSColor.white.withAlphaComponent(0.45))
+        case .normal, nil:
+            return nil
+        }
     }
 
     private static func vista(_ chip: Chip) -> NSView {
