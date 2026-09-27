@@ -113,9 +113,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let desdeCambio = ahora.timeIntervalSince(cambio)
 
         let anim = Animaciones.para(estado: estado, desdeCambio: desdeCambio)
-        let cuadro = hoja()?
-            .celda(fila: anim.fila, columna: Animaciones.cuadro(anim, tiempo: desdeCambio))
-        panel.mostrarCuadro(cuadro)
+        let h = hoja()
+        let cuadro = h?.celda(fila: anim.fila, columna: Animaciones.cuadro(anim, tiempo: desdeCambio))
+        panel.mostrarCuadro(cuadro, aireSuperior: h?.aireSuperior(fila: anim.fila) ?? 0)
 
         let mostrarGlobo = principal != nil && (estado == .waiting || estado == .failed || desdeCambio < 6)
         panel.mostrarGlobo(mostrarGlobo ? Textos.chips(sesiones, ahora: ahora) : nil)

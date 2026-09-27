@@ -32,6 +32,10 @@ PC_TAPA = (118, 122, 134, 255)   # gris espacial
 PC_BORDE = (84, 87, 97, 255)
 PC_LOGO = (170, 174, 186, 255)
 GLOBO = (252, 252, 252, 255)
+TAZA = (245, 243, 238, 255)
+TAZA_SOMBRA = (205, 200, 192, 255)
+CAFE = (111, 70, 45, 255)
+VAPOR = (235, 235, 240, 200)
 
 ANCHO, ALTO = 18, 12            # cuerpo
 BX, BY = (GRID_W - ANCHO) // 2, 13
@@ -40,6 +44,7 @@ BX, BY = (GRID_W - ANCHO) // 2, 13
 class Lienzo:
     def __init__(self):
         self.px = {}
+        self.vapor = set()     # sin contorno, se pinta al final
 
     def punto(self, x, y, color):
         if 0 <= x < GRID_W and 0 <= y < GRID_H:
@@ -58,6 +63,12 @@ class Lienzo:
 
     def espejo(self):
         self.px = {(GRID_W - 1 - x, y): c for (x, y), c in self.px.items()}
+
+    def terminar(self):
+        self.contorno()
+        for x, y in self.vapor:
+            if (x, y) not in self.px:
+                self.punto(x, y, VAPOR)
 
 
 def cuerpo(l, bx, by, aplastar=0):
@@ -149,6 +160,19 @@ def laptop(l, bx, by):
     l.rect(x - 1, y + h, w + 2, 1, PC_BORDE)
 
 
+def cafe(l, bx, by, cuadro):
+    """Tacita de café a la derecha de la laptop, con vapor que sube (cambia con el cuadro)."""
+    x, y = bx + ANCHO, by + ALTO - 2
+    l.rect(x, y, 3, 1, CAFE)                            # café visto desde arriba
+    l.rect(x, y + 1, 3, 4, TAZA)
+    l.rect(x + 2, y + 1, 1, 4, TAZA_SOMBRA)
+    l.punto(x + 3, y + 2, TAZA)                         # asa
+    l.punto(x + 3, y + 3, TAZA)
+    for k, (dx, dy) in enumerate(((1, -2), (0, -3), (1, -4))):
+        if (cuadro + k) % 3 != 0:
+            l.vapor.add((x + dx, y + dy))
+
+
 def globo_pregunta(l, bx, by):
     """Globo blanco con ? pegado a la cabeza (arriba a la derecha)."""
     x, y = bx + 1, by - 11
@@ -163,13 +187,15 @@ def globo_pregunta(l, bx, by):
 
 
 def mascota(dy=0, dx=0, aplastar=0, bi='lado', bd='lado', ei=0, ed=0, levantar=None,
-            ojos_tipo='abiertos', mirar=(0, 0), rubor=None, lagrima=0, extras=()):
+            ojos_tipo='abiertos', mirar=(0, 0), rubor=None, lagrima=0, extras=(), cuadro=0):
     l = Lienzo()
     bx, by = BX + dx, BY + dy
     patas(l, bx, by, levantar)
     x, y, w, h = cuerpo(l, bx, by, aplastar)
     if 'laptop' in extras:
         laptop(l, bx, by)                    # las patitas que teclean van encima
+    if 'cafe' in extras:
+        cafe(l, bx, by, cuadro)
     brazo(l, 'i', bi, bx, y, ei)
     brazo(l, 'd', bd, bx, y, ed)
     ojos(l, bx, y, ojos_tipo, *mirar)
@@ -179,7 +205,7 @@ def mascota(dy=0, dx=0, aplastar=0, bi='lado', bd='lado', ei=0, ed=0, levantar=N
         l.rect(bx + 4, y + 6, 2, lagrima, LAGRIMA)
     if 'pregunta' in extras:
         globo_pregunta(l, bx, y)
-    l.contorno()
+    l.terminar()
     return l
 
 
@@ -222,7 +248,7 @@ def filas():
     trabajar = []
     for f in range(6):
         trabajar.append(mascota(bi='teclear', bd='teclear', ei=-(f % 2), ed=-((f + 1) % 2),
-                                mirar=((0, 1, 0, -1, 0, 1)[f] * 0, 1), extras=('laptop',),
+                                mirar=((0, 1, 0, -1, 0, 1)[f] * 0, 1), extras=('laptop', 'cafe'), cuadro=f,
                                 ojos_tipo='cerrados' if f == 4 else 'abiertos'))
     revisar = []
     for f in range(6):

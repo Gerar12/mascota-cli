@@ -78,9 +78,9 @@ final class PanelMascota: NSPanel {
     }
 
     private func colocarGlobo() {
-        // La celda del sprite tiene aire transparente arriba: el globo se apoya casi sobre la cabeza.
-        globo.setFrameOrigin(NSPoint(x: ((frame.width - globo.frame.width) / 2).rounded(),
-                                     y: tamSprite.height - (tamSprite.height * 0.05).rounded()))
+        // El globo se apoya justo encima de la cabeza, sea cual sea la mascota o el tamaño.
+        let cabeza = (tamSprite.height * (1 - aireSuperior)).rounded()
+        globo.setFrameOrigin(NSPoint(x: ((frame.width - globo.frame.width) / 2).rounded(), y: cabeza + 4))
     }
 
     override var canBecomeKey: Bool { false }
@@ -88,7 +88,16 @@ final class PanelMascota: NSPanel {
     /// Sin esto macOS empuja la ventana debajo de la barra de menú al arrastrarla hacia arriba.
     override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect { frameRect }
 
-    func mostrarCuadro(_ imagen: CGImage?) { sprite.layer?.contents = imagen }
+    /// Fracción vacía arriba del dibujo de la animación actual (ver HojaSprites.aireSuperior).
+    private var aireSuperior: CGFloat = 0
+
+    func mostrarCuadro(_ imagen: CGImage?, aireSuperior: CGFloat) {
+        sprite.layer?.contents = imagen
+        if aireSuperior != self.aireSuperior {
+            self.aireSuperior = aireSuperior
+            if !globo.isHidden { colocarGlobo() }
+        }
+    }
 
     func mostrarGlobo(_ chips: [Chip]?) {
         guard let chips, !chips.isEmpty else { globo.isHidden = true; return }
