@@ -13,6 +13,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var ocultoManual = false
     private var ultimoSondeo = Date.distantPast
 
+    private var ultimoCodex = (cuando: Date.distantPast, abierto: false)
+
+    /// ¿Hay alguna terminal con Codex? (proceso `codex` con terminal; el servicio de fondo no tiene).
+    /// Se consulta cada 2 s porque lanza `ps`.
+    private func codexAbierto(_ ahora: Date) -> Bool {
+        guard ahora.timeIntervalSince(ultimoCodex.cuando) >= 2 else { return ultimoCodex.abierto }
+        let ps = Process()
+        ps.executableURL = URL(fileURLWithPath: "/bin/ps")
+        ps.arguments = ["-axo", "tty=,comm="]
+        let salida = Pipe()
+        ps.standardOutput = salida
+        var abierto = ultimoCodex.abierto
+        if (try? ps.run()) != nil {
+            let texto = String(decoding: salida.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+            ps.waitUntilExit()
+            abierto = texto.split(separator: "\n").contains { linea in
+                let partes = linea.split(separator: " ", maxSplits: 1)
+                guard partes.count == 2, partes[0] != "??" else { return false }
+                return partes[1] == "codex" || partes[1].hasSuffix("/codex")
+            }
+        }
+        ultimoCodex = (ahora, abierto)
+        return abierto
+    }
+
     private let abierta = Date()
     /// Al abrir la app se muestra unos segundos aunque no haya sesiones, para saber que está corriendo.
     private func visibleAlAbrir(_ ahora: Date) -> Bool { ahora.timeIntervalSince(abierta) < 10 }
@@ -71,7 +96,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             ultimoSondeo = ahora
             let dir = raiz.appendingPathComponent("estado")
             // Terminal cerrada sin SessionEnd: el proceso ya no existe, se olvida la sesión.
-            let (vivas, muertas) = Agregador.separarPorProceso(LectorEstado.leer(directorio: dir)) { pid in
+            let (vivas, muertas) = Agregador.separarPorProceso(LectorEstado.leer(directorio: dir),
+                                                               codexAbierto: codexAbierto(ahora)) { pid in
                 kill(pid, 0) == 0 || errno == EPERM
             }
             for s in muertas {

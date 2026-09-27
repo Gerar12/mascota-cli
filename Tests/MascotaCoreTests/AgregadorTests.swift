@@ -47,7 +47,16 @@ private let ahora = Date(timeIntervalSince1970: t0)
 
 @Test func quitaSesionesDeProcesosMuertos() {
     let lista = [s("viva", .running, hace: 1, pid: 10), s("muerta", .running, hace: 1, pid: 20), s("sinpid", .done, hace: 1)]
-    let (vivas, muertas) = Agregador.separarPorProceso(lista) { $0 == 10 }
+    let (vivas, muertas) = Agregador.separarPorProceso(lista, codexAbierto: true) { $0 == 10 }
     #expect(vivas.map(\.session) == ["viva", "sinpid"])
     #expect(muertas.map(\.session) == ["muerta"])
+}
+
+@Test func codexSinPidDependeDeQueHayaTerminalDeCodex() {
+    let lista = [s("cx", .done, hace: 1, cli: "codex"), s("cl", .done, hace: 1)]
+    let cerrado = Agregador.separarPorProceso(lista, codexAbierto: false) { _ in true }
+    #expect(cerrado.vivas.map(\.session) == ["cl"])
+    #expect(cerrado.muertas.map(\.session) == ["cx"])
+    let abierto = Agregador.separarPorProceso(lista, codexAbierto: true) { _ in true }
+    #expect(abierto.vivas.count == 2)
 }

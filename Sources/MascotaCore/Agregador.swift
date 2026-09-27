@@ -10,11 +10,15 @@ public enum Agregador {
         sesiones.filter { $0.pid != nil || ahora.timeIntervalSince1970 - $0.ts < caducidad }
     }
 
-    /// Separa las sesiones cuyo proceso ya terminó (terminal cerrada); las que no tienen pid cuentan como vivas.
-    public static func separarPorProceso(_ sesiones: [Sesion], estaVivo: (Int32) -> Bool) -> (vivas: [Sesion], muertas: [Sesion]) {
+    /// Separa las sesiones cuya terminal ya se cerró. Con pid: muere con su proceso. Codex sin pid (sus hooks
+    /// corren en un servicio de fondo que no se cierra): vive mientras haya alguna terminal con Codex abierta.
+    /// Claude sin pid cuenta como viva (y caduca por tiempo en `vigentes`).
+    public static func separarPorProceso(_ sesiones: [Sesion], codexAbierto: Bool,
+                                         estaVivo: (Int32) -> Bool) -> (vivas: [Sesion], muertas: [Sesion]) {
         var vivas: [Sesion] = [], muertas: [Sesion] = []
         for s in sesiones {
-            if let pid = s.pid, !estaVivo(pid) { muertas.append(s) } else { vivas.append(s) }
+            let muerta = if let pid = s.pid { !estaVivo(pid) } else { s.cli == "codex" && !codexAbierto }
+            if muerta { muertas.append(s) } else { vivas.append(s) }
         }
         return (vivas, muertas)
     }

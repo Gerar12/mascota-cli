@@ -42,7 +42,13 @@ proyecto=${proyecto%.}
 pid=; p=$PPID; n=0
 while [ -n "$p" ] && [ "$p" -gt 1 ] && [ $n -lt 2 ]; do
   nombre=$(ps -o comm= -p "$p") || break
-  case "${nombre##*/}" in claude|codex) pid=$p; break ;; esac
+  case "${nombre##*/}" in
+    claude|codex)
+      # Los hooks de Codex corren en su servicio de fondo (codex app-server), que no muere al
+      # cerrar la terminal: ese pid no sirve; la app vigila entonces si queda alguna terminal con Codex.
+      case "$(ps -o command= -p "$p")" in *app-server*) ;; *) pid=$p ;; esac
+      break ;;
+  esac
   p=$(ps -o ppid= -p "$p" | tr -d ' '); n=$((n+1))
 done
 mkdir -p "$dir" || exit 0

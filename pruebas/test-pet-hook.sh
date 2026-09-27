@@ -79,6 +79,11 @@ falso=$(mktemp -d); ln -s /bin/sh "$falso/claude"
 revisar claude-p1.json pid "$(cat "$falso/pid")"
 evento claude Stop p2
 [ -z "$(plutil -extract pid raw -o - "$MASCOTA_DIR/estado/claude-p2.json" 2>/dev/null)" ] || { echo "FALLA: pid sin proceso claude"; fallos=$((fallos+1)); }
+# El servicio de fondo de Codex (codex app-server) no cuenta como dueño de la sesión.
+ln -s /bin/sh "$falso/codex"
+"$falso/codex" -c 'printf "{\"hook_event_name\":\"Stop\",\"session_id\":\"d1\",\"cwd\":\"/a\"}" | "$1" codex; true' app-server "$HOOK"
+[ -e "$MASCOTA_DIR/estado/codex-d1.json" ] || { echo "FALLA: no escribió la sesión del servicio"; fallos=$((fallos+1)); }
+[ -z "$(plutil -extract pid raw -o - "$MASCOTA_DIR/estado/codex-d1.json" 2>/dev/null)" ] || { echo "FALLA: anotó el pid del servicio de fondo"; fallos=$((fallos+1)); }
 rm -rf "$falso"
 
 rm -rf "$MASCOTA_DIR"
