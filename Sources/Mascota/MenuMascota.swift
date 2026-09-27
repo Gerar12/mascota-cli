@@ -11,6 +11,7 @@ final class MenuMascota: NSObject, NSMenuDelegate {
     override init() {
         super.init()
         menu.delegate = self
+        menu.autoenablesItems = false      // para poder deshabilitar las opciones de energía sin cargador
     }
 
     func menuNeedsUpdate(_ menu: NSMenu) {
@@ -53,7 +54,8 @@ final class MenuMascota: NSObject, NSMenuDelegate {
         }
 
         menu.addItem(.separator())
-        menu.addItem(.sectionHeader(title: "Energía"))
+        let cargador = app.conCargador
+        menu.addItem(.sectionHeader(title: Energia.titulo(conCargador: cargador)))
         let trabajo = accion("Despierta mientras trabajan", #selector(alternarEnergiaTrabajo), icono: "cup.and.saucer")
         trabajo.state = app.despiertaMientrasTrabajan ? .on : .off
         trabajo.toolTip = "Con el cargador conectado, la Mac no entra en reposo mientras Claude o Codex trabajan (y 15 min después). La pantalla sí se apaga."
@@ -62,6 +64,13 @@ final class MenuMascota: NSObject, NSMenuDelegate {
         siempre.state = app.despiertaSiempre ? .on : .off
         siempre.toolTip = "Con el cargador conectado, la Mac no entra en reposo hasta que lo apagues. Con batería no hace nada. La pantalla sí se apaga; cerrar la tapa la duerme igual."
         menu.addItem(siempre)
+        if !cargador {
+            // Sin cargador no se pueden tocar; conservan su ✓ para reactivarse al conectarlo.
+            for it in [trabajo, siempre] {
+                it.isEnabled = false
+                if #available(macOS 14.4, *) { it.subtitle = "Conecta el cargador para usarlo" }
+            }
+        }
 
         menu.addItem(.separator())
         menu.addItem(.sectionHeader(title: "Apariencia"))

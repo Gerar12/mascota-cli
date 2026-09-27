@@ -18,4 +18,9 @@ public enum Energia {
         guard let ultima = ultimaVezTrabajando else { return false }
         return ahora.timeIntervalSince(ultima) < margen
     }
+
+    /// Las opciones de energía solo actúan con el cargador conectado; la preferencia se guarda aunque no.
+    public static func activa(preferencia: Bool, conCargador: Bool) -> Bool { preferencia && conCargador }
+
+    public static func titulo(conCargador: Bool) -> String { conCargador ? "Energía" : "Energía · sin cargador" }
 }

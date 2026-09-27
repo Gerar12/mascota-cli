@@ -18,3 +18,11 @@ import Testing
     #expect(Energia.hayTrabajo([s(.waiting)], ahora: ahora))
     #expect(Energia.hayTrabajo([s(.done), s(.failed)], ahora: ahora) == false)
 }
+
+@Test func soloConCargador() {
+    #expect(Energia.activa(preferencia: true, conCargador: true))
+    #expect(Energia.activa(preferencia: true, conCargador: false) == false)
+    #expect(Energia.activa(preferencia: false, conCargador: true) == false)
+    #expect(Energia.titulo(conCargador: true) == "Energía")
+    #expect(Energia.titulo(conCargador: false) == "Energía · sin cargador")
+}

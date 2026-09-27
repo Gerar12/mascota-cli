@@ -1,4 +1,5 @@
 import AppKit
+import IOKit.ps
 import IOKit.pwr_mgt
 import MascotaCore
 
@@ -50,12 +51,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         set { UserDefaults.standard.set(newValue, forKey: "energia.siempre") }
     }
 
+    /// ¿La Mac está conectada al cargador? Se consulta en cada sondeo: cambia en tiempo real.
+    var conCargador: Bool {
+        let info = IOPSCopyPowerSourcesInfo().takeRetainedValue()
+        let fuente = IOPSGetProvidingPowerSourceType(info).takeUnretainedValue() as String
+        return fuente == kIOPMACPowerKey
+    }
+
     private func actualizarEnergia(_ ahora: Date) {
         let trabajando = Energia.hayTrabajo(sesiones, ahora: ahora)
         if trabajando { ultimaVezTrabajando = ahora }
-        vigiliaTrabajo.poner(despiertaMientrasTrabajan
+        let cargador = conCargador
+        vigiliaTrabajo.poner(Energia.activa(preferencia: despiertaMientrasTrabajan, conCargador: cargador)
             && Energia.mantenerDespierta(trabajando: trabajando, ultimaVezTrabajando: ultimaVezTrabajando, ahora: ahora))
-        vigiliaSiempre.poner(despiertaSiempre)
+        vigiliaSiempre.poner(Energia.activa(preferencia: despiertaSiempre, conCargador: cargador))
     }
 
     private let abierta = Date()
