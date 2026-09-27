@@ -17,18 +17,20 @@ final class MenuMascota: NSObject, NSMenuDelegate {
         guard let app else { return }
         menu.removeAllItems()
 
-        menu.addItem(.sectionHeader(title: "Sesiones"))
+        // Una sola línea fija; la lista (que puede crecer mucho) vive en el submenú.
         let ahora = Date()
         let sesiones = Agregador.vigentes(app.sesiones, ahora: ahora)
+            .sorted { ($0.cli, $1.ts) < ($1.cli, $0.ts) }
         if sesiones.isEmpty {
             menu.addItem(accion("Sin sesiones abiertas", nil, icono: "moon.zzz"))
-        }
-        for s in sesiones.sorted(by: { ($0.cli, $1.ts) < ($1.cli, $0.ts) }) {
-            let estado = Agregador.estadoEfectivo(s, ahora: ahora)
-            let it = accion(s.project, #selector(nada), icono: Self.iconoEstado(estado))
-            let detalle = "\(s.nombreCLI) · \(Textos.verbo(estado))"
-            if #available(macOS 14.4, *) { it.subtitle = detalle } else { it.title = "\(s.project) — \(detalle)" }
-            menu.addItem(it)
+        } else {
+            menu.addItem(submenu("Sesiones · \(sesiones.count)", icono: "terminal", sesiones.map { s in
+                let estado = Agregador.estadoEfectivo(s, ahora: ahora)
+                let it = accion(s.project, #selector(nada), icono: Self.iconoEstado(estado))
+                let detalle = "\(s.nombreCLI) · \(Textos.verbo(estado))"
+                if #available(macOS 14.4, *) { it.subtitle = detalle } else { it.title = "\(s.project) — \(detalle)" }
+                return it
+            }))
         }
 
         if ControlVoz.disponible {
