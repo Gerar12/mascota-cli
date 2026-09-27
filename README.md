@@ -5,22 +5,29 @@ Mascota animada para macOS que muestra qué hacen **Claude Code** y **Codex CLI*
 ## Instalar
 
 ```sh
-sh scripts/instalar-mascotas.sh    # copia las mascotas de ChatGPT.app a ~/.mascota/mascotas (uso personal)
-sh scripts/empaquetar.sh           # compila e instala ~/Applications/Mascota.app y la abre
-python3 scripts/instalar-hooks.py  # agrega el hook a ~/.claude/settings.json y ~/.codex/hooks.json (con respaldo)
+git clone git@github.com:Gerar12/mascota-cli.git && cd mascota-cli
+sh scripts/instalar.sh            # pregunta si quieres voz; o --voz / --sin-voz
 ```
 
-Codex solo ejecuta hooks confiables: la primera vez, abre `codex` y aprueba los hooks nuevos de `pet-hook.sh` (o revísalos con `/hooks`).
+Hace todo en un paso, y se puede repetir sin problema:
+- Revisa macOS 14+, Swift (Command Line Tools) y Pillow.
+- Copia las mascotas de ChatGPT.app si la tienes; si no, dibuja a Clawd.
+- Instala los hooks de Claude y Codex, y la voz si la pides.
+- Conecta la cuota de Claude a su barra de estado, con respaldo.
+- Compila la app, la instala en `~/Applications` y la abre.
 
-Desde el menú de la barra: mostrar/ocultar, sesiones activas, mascota de cada CLI y «Abrir al iniciar sesión».
+Codex solo ejecuta hooks aprobados: abre `codex` y elige **Trust all**.
+
+Para desinstalar: `sh scripts/desinstalar.sh` (con `--todo` borra también `~/.mascota` sin preguntar). Nunca toca `~/.codex/pets`.
 
 ## Menú
 
-- **Sesiones:** tus terminales de Claude y Codex; clic para ir a la terminal en Ghostty. Los encargos automáticos que lanza otro agente no salen aquí, solo en el globo.
+- **Sesiones:** tus terminales de Claude y Codex. Con un clic vas a su terminal: la pestaña exacta en Terminal.app e iTerm2 (por su tty); en Ghostty, por carpeta y título. Los encargos automáticos que lanza otro agente no salen aquí, solo en el globo.
 - **No molestar:** 30 min, 1 hora o hasta mañana. Calla la voz, esconde el globo y los avisos, y al terminar todo vuelve solo.
 - **Cuota:**
   - Claude: ventana de 5 h y semana. Se lee de su barra de estado; para activarla, antepón `tee "$HOME/.mascota/claude-barra.json" | ` al comando de `statusLine` en `~/.claude/settings.json`.
   - Codex: porcentaje de la semana, leído de sus registros de sesión.
+- **Autodiagnóstico:** si Codex trabaja pero sus hooks no avisan (suele pasar tras una actualización o si pide aprobar los hooks otra vez), el menú lo dice arriba.
 - **Avisos:** notificación de macOS cuando Claude o Codex piden permiso y no estás en la terminal; al tocarla te lleva a ella.
 - **Vida propia:** en reposo te mira, pasea y hace travesuras. Si pasas el cursor encima de lado a lado, la acaricias ❤️, y te saluda cuando vuelves tras 5 minutos sin usar la Mac.
 
@@ -47,13 +54,6 @@ Las dos opciones solo funcionan con el cargador conectado: con batería, macOS d
 
 En los dos casos la pantalla sí se apaga. Cerrar la tapa duerme la Mac igual, salvo con un monitor externo. La app usa las aserciones de energía de macOS, las mismas que `caffeinate`, y las suelta al cerrarse.
 
-## Desinstalar
-
-```sh
-python3 scripts/instalar-hooks.py --desinstalar
-rm -rf ~/Applications/Mascota.app ~/.mascota
-```
-
 ## Mascota propia
 
 Cualquier mascota con el formato de Codex v2 (`pet.json` + hoja de sprites de 1536×2288, celdas de 192×208) en `~/.codex/pets/<id>/` o `~/.mascota/mascotas/<id>/` aparece en el menú. Se pueden crear con la skill `hatch-pet` de Codex. `python3 scripts/dibujar-clawd.py` dibuja a Clawd (el cangrejito de Claude Code) en pixel art y lo deja en `~/.codex/pets/clawd`.
@@ -64,7 +64,11 @@ Cualquier mascota con el formato de Codex v2 (`pet.json` + hoja de sprites de 15
 
 ## Desarrollo
 
-- `swift test`: lógica pura en `Sources/MascotaCore`.
+- `swift test`: lógica pura en `Sources/MascotaCore` (con pruebas).
+- La app (`Sources/Mascota`): `AppDelegate` solo conecta las piezas:
+  - `SondeoSesiones`: sesiones y autodiagnóstico.
+  - `ControlEnergia`, `ControlAvisos` (con No molestar) y `VidaPropia`.
+  - `PanelMascota`, `MenuMascota` y `EnfocarTerminal`.
 - `sh pruebas/*.sh`: pruebas del hook y los instaladores.
 - Con solo Command Line Tools, swift-testing a veces no encuentra sus macros en compilaciones incrementales: `Package.swift` le pasa `-plugin-path` explícito. Tras `empaquetar.sh` (release), `swift test` puede necesitar `rm -rf .build`.
 - El disco de la Mac no distingue mayúsculas: `tests/` y `Tests/` son la misma carpeta. Por eso las pruebas de shell viven en `pruebas/`.
