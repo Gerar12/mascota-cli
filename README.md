@@ -17,7 +17,6 @@ Desde el menú de la barra: mostrar/ocultar, sesiones activas, mascota de cada C
 ## Menú
 
 - **Sesiones:** tus terminales de Claude y Codex; clic para ir a la terminal en Ghostty. Los encargos automáticos que lanza otro agente no salen aquí, solo en el globo.
-- **Hoy:** la primera tarea de «Hoy» en Things 3, si Things está abierto. Se puede marcar como hecha o abrir.
 - **No molestar:** 30 min, 1 hora o hasta mañana. Calla la voz, esconde el globo y los avisos, y al terminar todo vuelve solo.
 - **Cuota:**
   - Claude: ventana de 5 h y semana. Se lee de su barra de estado; para activarla, antepón `tee "$HOME/.mascota/claude-barra.json" | ` al comando de `statusLine` en `~/.claude/settings.json`.

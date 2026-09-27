@@ -49,16 +49,6 @@ final class MenuMascota: NSObject, NSMenuDelegate {
                 return it
             }))
         }
-        // Tu tarea de hoy en Things (solo si Things está abierto), recortada para no ensanchar el menú.
-        app.things.refrescar()
-        if let t = app.things.tarea {
-            let hoy = submenu("Hoy: \(Self.recortar(t.nombre, 35))", icono: "checklist", [
-                accion("Marcar como hecha", #selector(completarTarea), icono: "checkmark.circle"),
-                accion("Abrir en Things", #selector(abrirTarea), icono: "arrow.up.forward.app"),
-            ])
-            hoy.toolTip = t.nombre + (app.things.pendientes > 1 ? " (\(app.things.pendientes) pendientes)" : "")
-            menu.addItem(hoy)
-        }
         // Cuota en una línea; el detalle de los reinicios, en el submenú.
         let claude = LectorCuotas.claude(), codex = LectorCuotas.codex()
         var partes: [String] = []
@@ -238,10 +228,6 @@ final class MenuMascota: NSObject, NSMenuDelegate {
     }
 
     @objc private func desactivarNoMolestar() { app?.desactivarNoMolestar() }
-
-    @objc private func completarTarea() { app?.things.completar() }
-
-    @objc private func abrirTarea() { app?.things.abrir() }
 
     @objc private func nada() {}
 

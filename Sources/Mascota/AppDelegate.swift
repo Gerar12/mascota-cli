@@ -178,12 +178,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    // MARK: Avisos, No molestar, Things, caricias y saludo
+    // MARK: Avisos, No molestar, caricias y saludo
 
     let avisador = Avisador()
-    let things = ThingsHoy()
     private var avisadas: Set<String> = []
-    private var ultimoThings = Date()
     private var caricia = Caricia()
     private var carinoHasta: Date?
     private var inactivoAntes: TimeInterval = 0
@@ -251,7 +249,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             EnfocarTerminal.ir(a: s)
         }
         avisador.pedirPermiso()
-        things.refrescar()
         catalogo = CatalogoMascotas.cargar(directorios: [
             raiz.appendingPathComponent("mascotas"),
             FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".codex/pets"),
@@ -311,7 +308,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             actualizarEnergia(ahora)
             revisarAvisos()
             if let h = noMolestarHasta, ahora >= h { desactivarNoMolestar() }
-            if ahora.timeIntervalSince(ultimoThings) >= 60 { ultimoThings = ahora; things.refrescar() }
         }
         let principal = Agregador.principal(sesiones, ahora: ahora)
         let estado = principal.map { Agregador.estadoEfectivo($0, ahora: ahora) }
