@@ -33,6 +33,7 @@ hook, root = sys.argv[1], pathlib.Path(sys.argv[2])
 errors = []
 def run(payload, *args, directory=None):
     env = dict(os.environ, MASCOTA_DIR=str(directory or root))
+    env.pop('TERM_PROGRAM', None)
     r = subprocess.run([hook, *args], input=json.dumps(payload), text=True,
                        capture_output=True, env=env)
     assert (r.returncode, r.stdout, r.stderr) == (0, '', ''), r
@@ -76,8 +77,19 @@ PY
 
 # Anota el pid del proceso claude/codex más cercano hacia arriba en la cadena de procesos.
 falso=$(mktemp -d); ln -s /bin/sh "$falso/claude"
-"$falso/claude" -c 'printf "{\"hook_event_name\":\"Stop\",\"session_id\":\"p1\",\"cwd\":\"/a\"}" | "$1" claude; echo $$ > "$2"; true' _ "$HOOK" "$falso/pid"
+env -u TERM_PROGRAM "$falso/claude" -c 'printf "{\"hook_event_name\":\"Stop\",\"session_id\":\"p1\",\"cwd\":\"/a\"}" | "$1" claude; echo $$ > "$2"; true' _ "$HOOK" "$falso/pid"
 revisar claude-p1.json pid "$(cat "$falso/pid")"
+# Sin terminal controladora (tty "??") ni TERM_PROGRAM: no anota tty ni terminal.
+for c in tty terminal; do
+  [ -z "$(plutil -extract $c raw -o - "$MASCOTA_DIR/estado/claude-p1.json" 2>/dev/null)" ] || { echo "FALLA: $c sin tty/TERM_PROGRAM"; fallos=$((fallos+1)); }
+done
+# Con pseudoterminal (script) y TERM_PROGRAM: anota la tty del proceso claude y la app de terminal.
+TERM_PROGRAM=Apple_Terminal script -q /dev/null "$falso/claude" -c 'printf "{\"hook_event_name\":\"Stop\",\"session_id\":\"t1\",\"cwd\":\"/a\"}" | "$1" claude; ps -o tty= -p $$ | tr -d " " > "$2"; true' _ "$HOOK" "$falso/tty" </dev/null >/dev/null 2>&1
+case "$(cat "$falso/tty")" in ''|'??') echo "FALLA: la prueba no obtuvo tty"; fallos=$((fallos+1)) ;; esac
+revisar claude-t1.json tty "$(cat "$falso/tty")"
+revisar claude-t1.json terminal Apple_Terminal
+TERM_PROGRAM='i"Term\' "$falso/claude" -c 'printf "{\"hook_event_name\":\"Stop\",\"session_id\":\"t2\",\"cwd\":\"/a\"}" | "$1" claude; true' _ "$HOOK"
+revisar claude-t2.json terminal 'i"Term\'
 evento claude Stop p2
 [ -z "$(plutil -extract pid raw -o - "$MASCOTA_DIR/estado/claude-p2.json" 2>/dev/null)" ] || { echo "FALLA: pid sin proceso claude"; fallos=$((fallos+1)); }
 # El servicio de fondo de Codex (codex app-server) no cuenta como dueño de la sesión.

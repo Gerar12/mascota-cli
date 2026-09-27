@@ -53,7 +53,7 @@ carpeta=${carpeta%.}
 auto=
 [ -n "${MASCOTA_SIN_VOZ:-}" ] && auto=1
 [ "$cli" = codex ] && [ -z "$(campo transcript_path)" ] && auto=1
-pid=; p=$PPID; n=0
+pid=; tty=; p=$PPID; n=0
 while [ -n "$p" ] && [ "$p" -gt 1 ] && [ $n -lt 2 ]; do
   nombre=$(ps -o comm= -p "$p") || break
   case "${nombre##*/}" in
@@ -63,15 +63,24 @@ while [ -n "$p" ] && [ "$p" -gt 1 ] && [ $n -lt 2 ]; do
       # Los hooks de Codex corren en su servicio de fondo (codex app-server), que no muere al
       # cerrar la terminal: ese pid no sirve; la app vigila entonces si queda alguna terminal con Codex.
       case "$comando" in *app-server*) ;; *) pid=$p ;; esac
+      # Tty del proceso (p. ej. ttys003): la app la usa para enfocar la pestaña exacta.
+      tty=$(ps -o tty= -p "$p" | tr -d ' ')
+      case "$tty" in ''|'??'|*[!A-Za-z0-9]*) tty= ;; esac
       break ;;
   esac
   p=$(ps -o ppid= -p "$p" | tr -d ' '); n=$((n+1))
 done
+# App de terminal (ghostty, Apple_Terminal, iTerm.app...), heredada del CLI.
+terminal=
+if [ -n "${TERM_PROGRAM:-}" ]; then
+  terminal=$(printf '%s.' "$TERM_PROGRAM" | json_escapar)
+  terminal=${terminal%.}
+fi
 mkdir -p "$dir" || exit 0
 tmp=$(mktemp "$dir/.$cli-$sesion.XXXXXX") || exit 0
 trap 'rm -f "$tmp"' EXIT
 printf '{"cli":"%s","session":"%s","project":"%s","state":"%s","ts":%s%s%s%s}\n' \
   "$cli" "$sesion" "$proyecto" "$estado" "$(date +%s)" "${pid:+,\"pid\":$pid}" "${carpeta:+,\"cwd\":\"$carpeta\"}" \
-  "${auto:+,\"auto\":true}" > "$tmp" \
+  "${auto:+,\"auto\":true}${tty:+,\"tty\":\"$tty\"}${terminal:+,\"terminal\":\"$terminal\"}" > "$tmp" \
   && mv -f "$tmp" "$archivo"
 exit 0
