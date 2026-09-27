@@ -22,6 +22,8 @@ MARGEN_IZQ = (CELDA_W - GRID_W * ESCALA) // 2
 CONTORNO = (74, 38, 26, 255)
 CUERPO = (217, 119, 87, 255)    # naranja de Claude
 LUZ = (236, 152, 120, 255)
+BRILLO = (246, 186, 160, 255)
+BRILLO_OJO = (255, 255, 255, 255)
 SOMBRA = (186, 94, 63, 255)
 OJO = (30, 22, 20, 255)
 CACHETE = (242, 148, 150, 255)
@@ -64,6 +66,9 @@ def cuerpo(l, bx, by, aplastar=0):
     l.rect(x, y, w, h, CUERPO)
     l.rect(x + 1, y, w - 2, 1, LUZ)
     l.rect(x, y + h - 1, w, 1, SOMBRA)
+    l.rect(x + w - 1, y + 1, 1, h - 1, SOMBRA)          # volumen: lado derecho en sombra
+    l.rect(x + 2, y + 1, 3, 1, BRILLO)                  # brillo arriba a la izquierda
+    l.punto(x + 1, y + 2, BRILLO)
     for cx in (x, x + w - 1):
         l.px.pop((cx, y), None)
     return x, y, w, h
@@ -83,6 +88,7 @@ def brazo(l, lado, pose, bx, by, extra=0):
     pegado = bx - 2 if lado == 'i' else bx + ANCHO
     if pose == 'lado':
         l.rect(fuera, by + 5 + extra, 3, 3, CUERPO)
+        l.rect(fuera, by + 7 + extra, 3, 1, SOMBRA)
     elif pose == 'arriba':
         l.rect(pegado, by - 3, 2, 7, CUERPO)
     elif pose == 'diagonal':
@@ -107,6 +113,7 @@ def ojos(l, bx, by, tipo='abiertos', dx=0, dy=0):
         x, y = ox + dx, by + 3 + dy
         if tipo == 'abiertos':
             l.rect(x, y, 2, 3, OJO)
+            l.punto(x, y, BRILLO_OJO)
         elif tipo == 'cerrados':
             l.rect(x, y + 2, 2, 1, OJO)
         elif tipo == 'felices':        # ^ ^
@@ -147,7 +154,7 @@ def globo_pregunta(l, bx, by):
 
 
 def mascota(dy=0, dx=0, aplastar=0, bi='lado', bd='lado', ei=0, ed=0, levantar=None,
-            ojos_tipo='abiertos', mirar=(0, 0), rubor=False, lagrima=0, extras=()):
+            ojos_tipo='abiertos', mirar=(0, 0), rubor=None, lagrima=0, extras=()):
     l = Lienzo()
     bx, by = BX + dx, BY + dy
     patas(l, bx, by, levantar)
@@ -157,7 +164,7 @@ def mascota(dy=0, dx=0, aplastar=0, bi='lado', bd='lado', ei=0, ed=0, levantar=N
     brazo(l, 'i', bi, bx, y, ei)
     brazo(l, 'd', bd, bx, y, ed)
     ojos(l, bx, y, ojos_tipo, *mirar)
-    if rubor:
+    if rubor if rubor is not None else ojos_tipo != 'tristes':
         cachetes(l, bx, y)
     if lagrima:
         l.rect(bx + 4, y + 6, 2, lagrima, LAGRIMA)
