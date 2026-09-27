@@ -53,6 +53,17 @@ final class MenuMascota: NSObject, NSMenuDelegate {
         }
 
         menu.addItem(.separator())
+        menu.addItem(.sectionHeader(title: "Energía"))
+        let trabajo = accion("Despierta mientras trabajan", #selector(alternarEnergiaTrabajo), icono: "cup.and.saucer")
+        trabajo.state = app.despiertaMientrasTrabajan ? .on : .off
+        trabajo.toolTip = "Con el cargador conectado, la Mac no entra en reposo mientras Claude o Codex trabajan (y 15 min después). La pantalla sí se apaga."
+        menu.addItem(trabajo)
+        let siempre = accion("Despierta siempre", #selector(alternarEnergiaSiempre), icono: "moon.stars")
+        siempre.state = app.despiertaSiempre ? .on : .off
+        siempre.toolTip = "La Mac no entra en reposo, también con batería, hasta que lo apagues. La pantalla sí se apaga; cerrar la tapa la duerme igual."
+        menu.addItem(siempre)
+
+        menu.addItem(.separator())
         menu.addItem(.sectionHeader(title: "Apariencia"))
         menu.addItem(submenu("Mascota", icono: "pawprint", app.catalogo.map { m in
             let it = accion(m.nombre, #selector(elegirMascota(_:)))
@@ -129,6 +140,10 @@ final class MenuMascota: NSObject, NSMenuDelegate {
     @objc private func repetir() { ControlVoz.repetirUltimo() }
 
     @objc private func callar() { ControlVoz.callar() }
+
+    @objc private func alternarEnergiaTrabajo() { app?.despiertaMientrasTrabajan.toggle() }
+
+    @objc private func alternarEnergiaSiempre() { app?.despiertaSiempre.toggle() }
 
     @objc private func alternarLogin() {
         do {

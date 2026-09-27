@@ -1,4 +1,5 @@
 import AppKit
+import IOKit.pwr_mgt
 import MascotaCore
 
 @MainActor
@@ -30,6 +31,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             ultimoPs = (ahora, Procesos.hayCodexConTerminal(salidaPs: texto))
         }
         return ultimoPs.codex
+    }
+
+    // Energía: automático mientras trabajan (solo con cargador) y manual «siempre» (también con batería).
+    private let vigiliaTrabajo = Vigilia(tipo: kIOPMAssertionTypePreventSystemSleep,
+                                         motivo: "Mascota: Claude o Codex están trabajando")
+    private let vigiliaSiempre = Vigilia(tipo: kIOPMAssertPreventUserIdleSystemSleep,
+                                         motivo: "Mascota: mantener despierta siempre")
+    private var ultimaVezTrabajando: Date?
+
+    var despiertaMientrasTrabajan: Bool {
+        get { UserDefaults.standard.object(forKey: "energia.trabajo") as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: "energia.trabajo") }
+    }
+    var despiertaSiempre: Bool {
+        get { UserDefaults.standard.bool(forKey: "energia.siempre") }
+        set { UserDefaults.standard.set(newValue, forKey: "energia.siempre") }
+    }
+
+    private func actualizarEnergia(_ ahora: Date) {
+        let trabajando = Energia.hayTrabajo(sesiones, ahora: ahora)
+        if trabajando { ultimaVezTrabajando = ahora }
+        vigiliaTrabajo.poner(despiertaMientrasTrabajan
+            && Energia.mantenerDespierta(trabajando: trabajando, ultimaVezTrabajando: ultimaVezTrabajando, ahora: ahora))
+        vigiliaSiempre.poner(despiertaSiempre)
     }
 
     private let abierta = Date()
@@ -98,6 +123,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 try? FileManager.default.removeItem(at: dir.appendingPathComponent("\(s.cli)-\(s.session).json"))
             }
             sesiones = vivas
+            actualizarEnergia(ahora)
         }
         let principal = Agregador.principal(sesiones, ahora: ahora)
         let estado = principal.map { Agregador.estadoEfectivo($0, ahora: ahora) }

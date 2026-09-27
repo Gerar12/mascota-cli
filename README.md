@@ -27,6 +27,14 @@ python3 scripts/instalar-hooks.py --voz
 - Desde el menú: leer respuestas sí/no, elegir voz, repetir lo último y callar ahora. En la terminal: `~/.mascota/voz/bin/callar.sh` y `repetir.sh`.
 - Los datos viven en `~/.mascota/voz/`: `OFF`, `proveedor`, la cola, los últimos audios y `voz.log`.
 
+## Energía
+
+Desde el menú de la mascota:
+- **Despierta mientras trabajan** (activado por defecto): con el cargador conectado, la Mac no entra en reposo mientras Claude o Codex trabajan o piden permiso, ni en los 15 minutos siguientes.
+- **Despierta siempre**: impide el reposo también con batería, hasta que lo apagues.
+
+En los dos casos la pantalla sí se apaga. Cerrar la tapa duerme la Mac igual, salvo con un monitor externo. La app usa las aserciones de energía de macOS, las mismas que `caffeinate`, y las suelta al cerrarse.
+
 ## Desinstalar
 
 ```sh
