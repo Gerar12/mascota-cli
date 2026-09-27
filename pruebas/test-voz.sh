@@ -88,7 +88,7 @@ with tempfile.TemporaryDirectory(prefix='mascota-voz-') as temp:
     def hook(base, voice, binpath, env):
         text = '# Hola **mundo**\n```sh\nsecreto_codigo\n```\n- Listo `oculto` [enlace](https://ejemplo.com)\n| tabla |\n'
         for cli in ['claude', 'codex']:
-            run(binpath, env, 'leer.sh', cli, data=json.dumps({'session_id':cli,'last_assistant_message':text}))
+            run(binpath, env, 'leer.sh', cli, data=json.dumps({'session_id':cli,'transcript_path':'/x/r.jsonl','last_assistant_message':text}))
             clean = (voice/f'ultimo-{cli}.txt').read_text()
             assert 'Hola mundo' in clean and 'Listo' in clean
             assert all(x not in clean for x in ['```', '**', 'secreto', 'oculto', 'https', 'tabla'])
@@ -202,7 +202,7 @@ with tempfile.TemporaryDirectory(prefix='mascota-voz-') as temp:
         env.update(RUN_NOHUP='1', SAY_DELAY='1.5')
         (voice/'proveedor').write_text('local')
         start = time.monotonic()
-        run(binpath, env, 'leer.sh', 'codex', data='{"session_id":"bg","last_assistant_message":"Hola fondo"}')
+        run(binpath, env, 'leer.sh', 'codex', data='{"session_id":"bg","transcript_path":"/x/r.jsonl","last_assistant_message":"Hola fondo"}')
         assert time.monotonic()-start < 1.3, 'el hook esperó al audio'
         deadline = time.monotonic()+6
         while time.monotonic()<deadline:

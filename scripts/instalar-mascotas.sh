@@ -1,7 +1,7 @@
 #!/bin/sh
 # Copia las mascotas incluidas en ChatGPT.app a ~/.mascota/mascotas (solo uso personal en esta Mac).
 set -eu
-ASAR=/Applications/ChatGPT.app/Contents/Resources/app.asar
+ASAR="${MASCOTA_ASAR:-/Applications/ChatGPT.app/Contents/Resources/app.asar}"   # sobreescribible en pruebas
 DESTINO="${MASCOTA_DIR:-$HOME/.mascota}/mascotas"
 [ -f "$ASAR" ] || { echo "No encuentro ChatGPT.app" >&2; exit 1; }
 TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT

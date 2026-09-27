@@ -47,14 +47,22 @@ carpeta=$(printf '%s.' "$carpeta" | json_escapar)
 carpeta=${carpeta%.}
 # Proceso claude/codex dueño de la sesión (padre o abuelo del hook): la app lo vigila para
 # quitar la sesión cuando se cierra la terminal.
+# Sesión automática (encargo de otro agente): el menú la oculta; el globo la sigue mostrando.
+# Es automática si viene de `codex exec` o `claude -p`, si tiene MASCOTA_SIN_VOZ, o si es un
+# ayudante temporal de Codex (sin archivo de conversación).
+auto=
+[ -n "${MASCOTA_SIN_VOZ:-}" ] && auto=1
+[ "$cli" = codex ] && [ -z "$(campo transcript_path)" ] && auto=1
 pid=; p=$PPID; n=0
 while [ -n "$p" ] && [ "$p" -gt 1 ] && [ $n -lt 2 ]; do
   nombre=$(ps -o comm= -p "$p") || break
   case "${nombre##*/}" in
     claude|codex)
+      comando=" $(ps -o command= -p "$p") "
+      case "$comando" in *" exec "*|*" -p "*|*" --print "*) auto=1 ;; esac
       # Los hooks de Codex corren en su servicio de fondo (codex app-server), que no muere al
       # cerrar la terminal: ese pid no sirve; la app vigila entonces si queda alguna terminal con Codex.
-      case "$(ps -o command= -p "$p")" in *app-server*) ;; *) pid=$p ;; esac
+      case "$comando" in *app-server*) ;; *) pid=$p ;; esac
       break ;;
   esac
   p=$(ps -o ppid= -p "$p" | tr -d ' '); n=$((n+1))
@@ -62,7 +70,8 @@ done
 mkdir -p "$dir" || exit 0
 tmp=$(mktemp "$dir/.$cli-$sesion.XXXXXX") || exit 0
 trap 'rm -f "$tmp"' EXIT
-printf '{"cli":"%s","session":"%s","project":"%s","state":"%s","ts":%s%s%s}\n' \
-  "$cli" "$sesion" "$proyecto" "$estado" "$(date +%s)" "${pid:+,\"pid\":$pid}" "${carpeta:+,\"cwd\":\"$carpeta\"}" > "$tmp" \
+printf '{"cli":"%s","session":"%s","project":"%s","state":"%s","ts":%s%s%s%s}\n' \
+  "$cli" "$sesion" "$proyecto" "$estado" "$(date +%s)" "${pid:+,\"pid\":$pid}" "${carpeta:+,\"cwd\":\"$carpeta\"}" \
+  "${auto:+,\"auto\":true}" > "$tmp" \
   && mv -f "$tmp" "$archivo"
 exit 0

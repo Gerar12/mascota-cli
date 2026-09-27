@@ -47,4 +47,9 @@ public enum Agregador {
     public static func debeMostrarse(_ sesiones: [Sesion], ahora: Date) -> Bool {
         !vigentes(sesiones, ahora: ahora).isEmpty
     }
+
+    /// Solo las sesiones que abrió el usuario (sin encargos automáticos).
+    public static func delUsuario(_ sesiones: [Sesion]) -> [Sesion] {
+        sesiones.filter { $0.auto != true }
+    }
 }

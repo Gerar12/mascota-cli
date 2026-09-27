@@ -25,10 +25,15 @@ esperar "codex exec no se lee" 0
 esperar "claude -p no se lee" 0
 printf '%s' "$json" | MASCOTA_SIN_VOZ=1 "$LEER" claude
 esperar "MASCOTA_SIN_VOZ no se lee" 0
-"$falso/codex" -c 'printf "%s" "$1" | "$2" codex; true' tui "$json" "$LEER"
+"$falso/codex" -c 'printf "%s" "$1" | "$2" codex; true' tui '{"session_id":"s","transcript_path":"/x/r.jsonl","last_assistant_message":"Hola mundo"}' "$LEER"
 esperar "codex interactivo sí se lee" 1
 "$falso/claude" -c 'printf "%s" "$1" | "$2" claude; true' _ "$json" "$LEER"
 esperar "claude interactivo sí se lee" 1
+
+printf '%s' '{"session_id":"w","transcript_path":null,"last_assistant_message":"Imagen lista"}' | "$LEER" codex
+esperar "ayudante de Codex sin transcript no se lee" 0
+printf '%s' '{"session_id":"t","transcript_path":"/x/rollout.jsonl","last_assistant_message":"Hola"}' | "$LEER" codex
+esperar "Codex con transcript sí se lee" 1
 
 rm -rf "$MASCOTA_DIR" "$falso"
 [ $fallos -eq 0 ] && echo "OK voz-encargos" || exit 1

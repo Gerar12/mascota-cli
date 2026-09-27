@@ -48,7 +48,7 @@ def explicit_event():
 check('evento como argumento', explicit_event)
 def special_project():
     project = 'á "comillas" \\ barra\ttab\nsalto\n'
-    run({'hook_event_name':'SubagentStart','session_id':'especial','cwd':'/tmp/'+project}, 'codex')
+    run({'hook_event_name':'SubagentStart','session_id':'especial','cwd':'/tmp/'+project,'transcript_path':'/r.jsonl'}, 'codex')
     state = json.loads((root/'estado/codex-especial.json').read_text())
     assert state == dict(cli='codex', session='especial', project=project,
                          state='running', ts=state['ts'], cwd='/tmp/'+project)
@@ -85,6 +85,15 @@ ln -s /bin/sh "$falso/codex"
 "$falso/codex" -c 'printf "{\"hook_event_name\":\"Stop\",\"session_id\":\"d1\",\"cwd\":\"/a\"}" | "$1" codex; true' app-server "$HOOK"
 [ -e "$MASCOTA_DIR/estado/codex-d1.json" ] || { echo "FALLA: no escribió la sesión del servicio"; fallos=$((fallos+1)); }
 [ -z "$(plutil -extract pid raw -o - "$MASCOTA_DIR/estado/codex-d1.json" 2>/dev/null)" ] || { echo "FALLA: anotó el pid del servicio de fondo"; fallos=$((fallos+1)); }
+# Sesiones automáticas: se marcan "auto" para que el menú muestre solo las del usuario.
+"$falso/codex" -c 'printf "{\"hook_event_name\":\"Stop\",\"session_id\":\"x1\",\"cwd\":\"/a\",\"transcript_path\":\"/r.jsonl\"}" | "$1" codex; true' exec "$HOOK"
+revisar codex-x1.json auto true
+printf '{"hook_event_name":"Stop","session_id":"w1","cwd":"/a","transcript_path":null}' | "$HOOK" codex
+revisar codex-w1.json auto true
+printf '{"hook_event_name":"Stop","session_id":"u1","cwd":"/a","transcript_path":"/r.jsonl"}' | "$HOOK" codex
+[ -z "$(plutil -extract auto raw -o - "$MASCOTA_DIR/estado/codex-u1.json" 2>/dev/null)" ] || { echo "FALLA: sesión del usuario marcada auto"; fallos=$((fallos+1)); }
+printf '{"hook_event_name":"Stop","session_id":"u2","cwd":"/a","transcript_path":"/r.jsonl"}' | MASCOTA_SIN_VOZ=1 "$HOOK" claude
+revisar claude-u2.json auto true
 rm -rf "$falso"
 
 rm -rf "$MASCOTA_DIR"

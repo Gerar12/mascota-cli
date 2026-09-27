@@ -30,3 +30,10 @@ import Testing
     let json = #"{"cli":"codex","session":"b","project":"p","state":"done","ts":1,"cwd":"/Users/x/p"}"#
     #expect(try JSONDecoder().decode(Sesion.self, from: Data(json.utf8)).cwd == "/Users/x/p")
 }
+
+@Test func sesionesAutomaticasNoSonDelUsuario() throws {
+    let auto = try JSONDecoder().decode(Sesion.self, from: Data(#"{"cli":"codex","session":"a","project":"p","state":"running","ts":1,"auto":true}"#.utf8))
+    let mia = Sesion(cli: "claude", session: "b", project: "p", state: .running, ts: 1)
+    #expect(auto.auto == true)
+    #expect(Agregador.delUsuario([auto, mia]) == [mia])
+}

@@ -27,6 +27,8 @@ case "$3" in null-signal-*) alto=2288 ;; gato-*) alto=1872 ;; roto-*) alto=100 ;
 printf '%s\n  pixelHeight: %s\n' "$3" "$alto"
 EOF
 chmod +x "$T/bin/npx" "$T/bin/sips"
+# No depender de que ChatGPT.app esté instalada: el npx falso no lee el archivo.
+export MASCOTA_ASAR="$T/app.asar"; : > "$MASCOTA_ASAR"
 PATH="$T/bin:$PATH" MASCOTA_DIR="$T/datos" sh "$RAIZ/scripts/instalar-mascotas.sh" > "$T/salida" 2> "$T/avisos"
 python3 - "$T" <<'PY'
 import json, pathlib, sys

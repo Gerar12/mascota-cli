@@ -14,11 +14,13 @@ public struct Sesion: Codable, Equatable, Sendable {
     public let pid: Int32?
     /// Carpeta de trabajo que reportó el CLI (para encontrar su terminal).
     public let cwd: String?
+    /// Encargo automático de otro agente (codex exec, claude -p, ayudantes de Codex): no sale en el menú.
+    public let auto: Bool?
 
     public init(cli: String, session: String, project: String, state: EstadoAgente, ts: TimeInterval,
-                pid: Int32? = nil, cwd: String? = nil) {
+                pid: Int32? = nil, cwd: String? = nil, auto: Bool? = nil) {
         self.cli = cli; self.session = session; self.project = project; self.state = state; self.ts = ts
-        self.pid = pid; self.cwd = cwd
+        self.pid = pid; self.cwd = cwd; self.auto = auto
     }
 
     public var nombreCLI: String { cli == "codex" ? "Codex" : "Claude" }

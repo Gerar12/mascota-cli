@@ -36,6 +36,9 @@ def publicar(path, text):
 try:
     voice = pathlib.Path(sys.argv[1])
     data = json.load(sys.stdin)
+    # Ayudantes temporales de Codex (sin archivo de conversación): los lanza otro agente, no se leen.
+    if sys.argv[3] == "codex" and not (isinstance(data.get("transcript_path"), str) and data["transcript_path"]):
+        sys.exit(1)
     text = data.get("last_assistant_message", "")
     if not isinstance(text, str) or not text.strip(): sys.exit(1)
     text = clean(text)[:1500].strip()
@@ -51,7 +54,7 @@ try:
     publicar(job, f"SPEAK\n{sid}\n{text}\n")
 except Exception:
     sys.exit(1)
-' "$VOZ" "$BIN"; then
+' "$VOZ" "$BIN" "$1"; then
     nohup /bin/sh "$BIN/despachador.sh" </dev/null >/dev/null 2>&1 &
 fi
 exit 0

@@ -32,7 +32,8 @@ final class MenuMascota: NSObject, NSMenuDelegate {
 
         // Una sola línea fija; la lista (que puede crecer mucho) vive en el submenú.
         let ahora = Date()
-        let sesiones = Agregador.vigentes(app.sesiones, ahora: ahora)
+        // Solo las terminales del usuario: los encargos automáticos se ven en el globo, no aquí.
+        let sesiones = Agregador.delUsuario(Agregador.vigentes(app.sesiones, ahora: ahora))
             .sorted { ($0.cli, $1.ts) < ($1.cli, $0.ts) }
         if sesiones.isEmpty {
             menu.addItem(accion("Sin sesiones abiertas", nil, icono: "moon.zzz"))
