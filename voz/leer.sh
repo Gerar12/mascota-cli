@@ -3,6 +3,19 @@
 exec >/dev/null 2>&1
 VOZ="${MASCOTA_DIR:-$HOME/.mascota}/voz"
 [ -f "$VOZ/OFF" ] && exit 0
+# No leer sesiones automáticas: encargos que lanza otro agente (`codex exec`, `claude -p`)
+# o procesos marcados con MASCOTA_SIN_VOZ. Se busca el claude/codex entre padre y abuelo.
+[ -n "${MASCOTA_SIN_VOZ:-}" ] && exit 0
+p=$PPID; n=0
+while [ -n "$p" ] && [ "$p" -gt 1 ] && [ $n -lt 3 ]; do
+  nombre=$(ps -o comm= -p "$p") || break
+  comando=" $(ps -o command= -p "$p") "
+  case "${nombre##*/}" in
+    codex) case "$comando" in *" exec "*) exit 0 ;; esac; break ;;
+    claude) case "$comando" in *" -p "*|*" --print "*) exit 0 ;; esac; break ;;
+  esac
+  p=$(ps -o ppid= -p "$p" | tr -d ' '); n=$((n+1))
+done
 case "${1:-}" in claude|codex) ;; *) exit 0 ;; esac
 BIN=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd) || exit 0
 export PYTHONDONTWRITEBYTECODE=1
