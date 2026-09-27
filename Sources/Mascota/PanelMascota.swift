@@ -156,16 +156,27 @@ final class PanelMascota: NSPanel {
     /// Fracción vacía arriba del dibujo de la animación actual (ver HojaSprites.aireSuperior).
     private var aireSuperior: CGFloat = 0
 
+    private weak var cuadroActual: CGImage?
+
     func mostrarCuadro(_ imagen: CGImage?, aireSuperior: CGFloat) {
-        sprite.layer?.contents = imagen
+        // Solo redibuja si cambió el cuadro (el reloj corre a 20 por segundo).
+        if imagen !== cuadroActual {
+            cuadroActual = imagen
+            sprite.layer?.contents = imagen
+        }
         if aireSuperior != self.aireSuperior {
             self.aireSuperior = aireSuperior
             if !globo.isHidden { colocarGlobo() }
         }
     }
 
+    private var chipsActuales: [Chip]?
+
     func mostrarGlobo(_ chips: [Chip]?) {
-        guard let chips, !chips.isEmpty else { globo.isHidden = true; return }
+        let chips = (chips?.isEmpty ?? true) ? nil : chips
+        guard chips != chipsActuales else { return }      // nada cambió: no tocar la vista
+        chipsActuales = chips
+        guard let chips else { globo.isHidden = true; return }
         globo.mostrar(chips)
         colocarGlobo()
         globo.isHidden = false

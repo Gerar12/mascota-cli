@@ -86,7 +86,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let h = hojas[id] { return h }
         guard let def = catalogo.first(where: { $0.id == id }) ?? catalogo.first,
               let h = HojaSprites(url: def.hoja) else { return nil }
-        hojas[id] = h
+        hojas = [id: h]          // solo la mascota elegida en memoria
         return h
     }
 

@@ -12,8 +12,19 @@ final class HojaSprites {
 
     init?(url: URL) {
         guard let img = NSImage(contentsOf: url),
-              let cg = img.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return nil }
-        imagen = cg
+              let cg = img.cgImage(forProposedRect: nil, context: nil, hints: nil),
+              let decodificada = Self.decodificar(cg) else { return nil }
+        imagen = decodificada
+    }
+
+    /// Descomprime la hoja UNA vez en un mapa de bits propio. Si se recorta la imagen comprimida (webp/png),
+    /// macOS vuelve a descomprimir la hoja entera por cada recorte y guarda cada copia: ~14 MB por cuadro.
+    private static func decodificar(_ img: CGImage) -> CGImage? {
+        guard let ctx = CGContext(data: nil, width: img.width, height: img.height, bitsPerComponent: 8,
+                                  bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
+        ctx.draw(img, in: CGRect(x: 0, y: 0, width: img.width, height: img.height))
+        return ctx.makeImage()
     }
 
     func celda(fila: Int, columna: Int) -> CGImage? {
