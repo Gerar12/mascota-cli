@@ -42,20 +42,10 @@ final class SondeoSesiones {
         }
     }
 
-    /// ¿Hay alguna terminal con Codex? (proceso `codex` con terminal; el servicio de fondo no tiene).
-    /// Se consulta cada 2 s porque lanza `ps`.
+    /// ¿Hay alguna terminal con Codex? Consulta directa al sistema, cada 2 s.
     private func codexAbierto(_ ahora: Date) -> Bool {
         guard ahora.timeIntervalSince(ultimoPs.cuando) >= 2 else { return ultimoPs.codex }
-        let ps = Process()
-        ps.executableURL = URL(fileURLWithPath: "/bin/ps")
-        ps.arguments = ["-axo", "tty=,comm="]
-        let salida = Pipe()
-        ps.standardOutput = salida
-        if (try? ps.run()) != nil {
-            let texto = String(decoding: salida.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
-            ps.waitUntilExit()
-            ultimoPs = (ahora, Procesos.hayCodexConTerminal(salidaPs: texto))
-        }
+        ultimoPs = (ahora, ProcesosSistema.hayCodexConTerminal())
         return ultimoPs.codex
     }
 }

@@ -23,6 +23,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var ocultoManual = false
     private var ultimoSondeo = Date.distantPast
     private let abierta = Date()
+    private var ultimaRevisionMemoria = Date()
+    /// Si la app pasa de este tope, suelta sus cachés (la hoja se vuelve a cargar al siguiente cuadro).
+    private let topeMemoriaMB = 250.0
 
     func applicationDidFinishLaunching(_ n: Notification) {
         menu.app = self
@@ -51,6 +54,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let reloj = Timer(timeInterval: 1.0 / 20, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.tick() }
         }
+        reloj.tolerance = 0.02         // deja que macOS agrupe los despertares (ahorra batería)
         RunLoop.main.add(reloj, forMode: .common)
         panel.orderFrontRegardless()
         tick()
@@ -102,6 +106,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             avisos.revisar(sesiones, ahora: ahora,
                            pose: hoja()?.celda(fila: Animaciones.waiting.fila, columna: 0))   // pidiendo permiso
         }
+        if ahora.timeIntervalSince(ultimaRevisionMemoria) >= 60 {
+            ultimaRevisionMemoria = ahora
+            let mb = ProcesosSistema.memoriaMB()
+            if mb > topeMemoriaMB {
+                NSLog("Mascota: memoria alta (%.0f MB); suelto cachés", mb)
+                hojas.removeAll()
+            }
+        }
+        // Oculta (sin sesiones, o la ocultaste): solo se revisan las sesiones, no se dibuja nada.
+        if !panel.isVisible && !Agregador.debeMostrarse(sesiones, ahora: ahora) { return }
         let principal = Agregador.principal(sesiones, ahora: ahora)
         let estado = principal.map { Agregador.estadoEfectivo($0, ahora: ahora) }
 
