@@ -20,12 +20,10 @@ case "$evento" in
   SessionEnd) rm -f "$archivo"; exit 0 ;;
   *) exit 0 ;;
 esac
-# El centinela conserva los saltos de línea finales del nombre.
-proyecto=$(campo cwd; printf '.')
-proyecto=${proyecto%.}
-while [ "${proyecto%/}" != "$proyecto" ]; do proyecto=${proyecto%/}; done
-proyecto=${proyecto##*/}
-proyecto=$(printf '%s.' "${proyecto:-?}" | LC_ALL=C awk '
+# Escapa texto para JSON. La entrada lleva un "." de centinela al final (conserva saltos de línea
+# finales) que se devuelve y el llamador quita.
+json_escapar() {
+  LC_ALL=C awk '
   BEGIN { for (i=1; i<32; i++) escape[sprintf("%c",i)]=sprintf("\\u%04x",i) }
   { if (NR>1) printf "\\n"
     for (i=1; i<=length($0); i++) {
@@ -35,8 +33,18 @@ proyecto=$(printf '%s.' "${proyecto:-?}" | LC_ALL=C awk '
       else if (c in escape) printf "%s", escape[c]
       else printf "%s", c
     }
-  }')
+  }'
+}
+carpeta=$(campo cwd; printf '.')
+carpeta=${carpeta%.}
+proyecto=$carpeta
+while [ "${proyecto%/}" != "$proyecto" ]; do proyecto=${proyecto%/}; done
+proyecto=${proyecto##*/}
+proyecto=$(printf '%s.' "${proyecto:-?}" | json_escapar)
 proyecto=${proyecto%.}
+# Carpeta completa: la app la usa para encontrar la terminal de la sesión en Ghostty.
+carpeta=$(printf '%s.' "$carpeta" | json_escapar)
+carpeta=${carpeta%.}
 # Proceso claude/codex dueño de la sesión (padre o abuelo del hook): la app lo vigila para
 # quitar la sesión cuando se cierra la terminal.
 pid=; p=$PPID; n=0
@@ -54,7 +62,7 @@ done
 mkdir -p "$dir" || exit 0
 tmp=$(mktemp "$dir/.$cli-$sesion.XXXXXX") || exit 0
 trap 'rm -f "$tmp"' EXIT
-printf '{"cli":"%s","session":"%s","project":"%s","state":"%s","ts":%s%s}\n' \
-  "$cli" "$sesion" "$proyecto" "$estado" "$(date +%s)" "${pid:+,\"pid\":$pid}" > "$tmp" \
+printf '{"cli":"%s","session":"%s","project":"%s","state":"%s","ts":%s%s%s}\n' \
+  "$cli" "$sesion" "$proyecto" "$estado" "$(date +%s)" "${pid:+,\"pid\":$pid}" "${carpeta:+,\"cwd\":\"$carpeta\"}" > "$tmp" \
   && mv -f "$tmp" "$archivo"
 exit 0

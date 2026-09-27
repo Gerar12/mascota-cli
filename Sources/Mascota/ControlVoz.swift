@@ -21,6 +21,16 @@ enum ControlVoz {
         return id.isEmpty ? "eleven" : id
     }
 
+    /// Lee el final del log del lector de voz para saber si ElevenLabs se quedó sin créditos.
+    static var elevenSinCreditos: Bool {
+        guard let h = FileHandle(forReadingAtPath: "/tmp/claude-tts.log") else { return false }
+        defer { try? h.close() }
+        let fin = (try? h.seekToEnd()) ?? 0
+        try? h.seek(toOffset: fin > 65_536 ? fin - 65_536 : 0)
+        let texto = String(decoding: (try? h.readToEnd()) ?? Data(), as: UTF8.self)
+        return Voz.elevenSinCreditos(log: texto)
+    }
+
     static func elegir(proveedor id: String) {
         try? (id + "\n").write(to: archivoProveedor, atomically: true, encoding: .utf8)
     }

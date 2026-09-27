@@ -25,3 +25,8 @@ import Testing
     let s = try JSONDecoder().decode(Sesion.self, from: Data(json.utf8))
     #expect(s.pid == 4321)
 }
+
+@Test func leeLaCarpetaCuandoViene() throws {
+    let json = #"{"cli":"codex","session":"b","project":"p","state":"done","ts":1,"cwd":"/Users/x/p"}"#
+    #expect(try JSONDecoder().decode(Sesion.self, from: Data(json.utf8)).cwd == "/Users/x/p")
+}

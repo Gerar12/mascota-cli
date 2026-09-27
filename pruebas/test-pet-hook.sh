@@ -16,6 +16,7 @@ salida=$(evento claude UserPromptSubmit s1)
 revisar claude-s1.json state running
 revisar claude-s1.json project vps-prod
 revisar claude-s1.json cli claude
+revisar claude-s1.json cwd /Users/x/vps-prod
 evento claude PermissionRequest s1; revisar claude-s1.json state waiting
 evento claude PostToolUse s1;       revisar claude-s1.json state running
 evento claude Stop s1;              revisar claude-s1.json state done
@@ -50,7 +51,7 @@ def special_project():
     run({'hook_event_name':'SubagentStart','session_id':'especial','cwd':'/tmp/'+project}, 'codex')
     state = json.loads((root/'estado/codex-especial.json').read_text())
     assert state == dict(cli='codex', session='especial', project=project,
-                         state='running', ts=state['ts'])
+                         state='running', ts=state['ts'], cwd='/tmp/'+project)
     assert abs(state['ts'] - time.time()) < 5
 check('escape JSON sin perder nombre', special_project)
 def missing_cwd():

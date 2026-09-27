@@ -5,4 +5,12 @@ public enum Voz {
         ("edge", "Gratis (edge-tts, Dalia)"),
         ("local", "Local (Mónica, sin internet)"),
     ]
+
+    /// ¿El último intento con ElevenLabs en el log del lector de voz falló por falta de créditos?
+    public static func elevenSinCreditos(log: String) -> Bool {
+        guard let ultimo = log.split(separator: "\n").last(where: {
+            $0.hasPrefix("ELEVEN OK") || $0.hasPrefix("ELEVEN FAIL")
+        }) else { return false }
+        return ultimo.contains("quota_exceeded")
+    }
 }

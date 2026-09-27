@@ -19,6 +19,7 @@ cat > "$APP/Contents/Info.plist" <<'EOF'
   <key>CFBundleShortVersionString</key><string>0.1</string>
   <key>LSMinimumSystemVersion</key><string>14.0</string>
   <key>LSUIElement</key><true/>
+  <key>NSAppleEventsUsageDescription</key><string>Para llevarte a la terminal de Ghostty de cada sesión.</string>
 </dict></plist>
 EOF
 codesign --force --sign - "$APP"

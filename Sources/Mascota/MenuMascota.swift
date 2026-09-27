@@ -26,7 +26,8 @@ final class MenuMascota: NSObject, NSMenuDelegate {
         } else {
             menu.addItem(submenu("Sesiones · \(sesiones.count)", icono: "terminal", sesiones.map { s in
                 let estado = Agregador.estadoEfectivo(s, ahora: ahora)
-                let it = accion(s.project, #selector(nada), icono: Self.iconoEstado(estado))
+                let it = accion(s.project, #selector(irASesion(_:)), icono: Self.iconoEstado(estado))
+                it.representedObject = s
                 let detalle = "\(s.nombreCLI) · \(Textos.verbo(estado))"
                 if #available(macOS 14.4, *) { it.subtitle = detalle } else { it.title = "\(s.project) — \(detalle)" }
                 return it
@@ -39,8 +40,10 @@ final class MenuMascota: NSObject, NSMenuDelegate {
             let leer = accion("Leer respuestas", #selector(alternarVoz), icono: "speaker.wave.2")
             leer.state = ControlVoz.silenciada ? .off : .on
             menu.addItem(leer)
+            let sinCreditos = ControlVoz.elevenSinCreditos
             menu.addItem(submenu("Voz", icono: "waveform", Voz.proveedores.map { p in
-                let it = accion(p.nombre, #selector(elegirVoz(_:)))
+                let nombre = p.id == "eleven" && sinCreditos ? "\(p.nombre) · sin créditos" : p.nombre
+                let it = accion(nombre, #selector(elegirVoz(_:)))
                 it.representedObject = p.id
                 it.state = ControlVoz.proveedor == p.id ? .on : .off
                 return it
@@ -92,7 +95,10 @@ final class MenuMascota: NSObject, NSMenuDelegate {
         return raiz
     }
 
-    @objc private func nada() {}
+    @objc private func irASesion(_ it: NSMenuItem) {
+        guard let s = it.representedObject as? Sesion else { return }
+        EnfocarTerminal.ir(a: s)
+    }
 
     private func accion(_ titulo: String, _ sel: Selector?, icono: String? = nil) -> NSMenuItem {
         let it = NSMenuItem(title: titulo, action: sel, keyEquivalent: "")
