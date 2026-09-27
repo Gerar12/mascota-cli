@@ -86,4 +86,57 @@ before = [p.read_bytes() for p in configs]
 assert run('--desinstalar').returncode == 0
 assert [p.read_bytes() for p in configs] == before, 'desinstalar modificó configuración sin hooks'
 PY
+python3 - "$RAIZ" "$T" <<'PY'
+import json, os, pathlib, shlex, subprocess, sys
+repo, root = map(pathlib.Path, sys.argv[1:])
+voice = root / "voz con 'comilla" / 'bin'
+configs = [root/'voz-claude.json', root/'voz-codex.json']
+def run(*extra):
+    result = subprocess.run([sys.executable, str(repo/'scripts/instalar-hooks.py'),
+        '--claude', str(configs[0]), '--codex', str(configs[1]),
+        '--destino-hook', str(root/'pet-hook.sh'), '--destino-voz', str(voice),
+        *extra], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+def hooks(path):
+    return [h for g in json.loads(path.read_text())['hooks']['Stop'] for h in g['hooks']]
+for path in configs:
+    path.write_text(json.dumps({'hooks': {'Stop': [{'hooks': [
+        {'type': 'command', 'command': '/otra/leer.sh'},
+        {'type': 'command', 'command': '/tts.sh'}]}]}}))
+run()
+assert not voice.exists(), 'sin --voz instaló archivos de voz'
+run('--voz')
+for name in ['leer.sh', 'despachador.sh', 'limpiar.py', 'callar.sh', 'repetir.sh']:
+    assert (voice/name).read_bytes() == (repo/'voz'/name).read_bytes()
+    assert os.access(voice/name, os.X_OK)
+for path, cli in zip(configs, ['claude', 'codex']):
+    own = [h for h in hooks(path) if 'bin/leer.sh' in h['command']]
+    assert len(own) == 1
+    assert shlex.split(own[0]['command']) == ['/bin/sh', str(voice/'leer.sh'), cli]
+    assert own[0]['timeout'] == 10
+    assert own[0].get('async') is (True if cli == 'claude' else None)
+before = [p.read_bytes() for p in configs]
+backups = set(root.glob('voz-*.bak-mascota-*'))
+run('--voz'); run()
+assert [p.read_bytes() for p in configs] == before
+assert set(root.glob('voz-*.bak-mascota-*')) == backups
+assert backups
+# Una reinstalación en otra ruta sustituye el hook anterior, sin duplicarlo.
+voice = root/'voz-nueva/bin'
+run('--voz')
+for path in configs:
+    own = [h for h in hooks(path) if 'bin/leer.sh' in h['command']]
+    assert len(own) == 1 and str(voice) in own[0]['command']
+    cfg = json.loads(path.read_text())
+    cfg['hooks']['Stop'][-1]['hooks'].append({'type':'command','command':'/conservar.sh'})
+    path.write_text(json.dumps(cfg))
+# Retira la voz aunque no se pase --voz y el destino actual sea distinto.
+voice = root/'otra-ruta/bin'
+run('--desinstalar')
+for path in configs:
+    assert [h['command'] for h in hooks(path)] == ['/otra/leer.sh', '/tts.sh', '/conservar.sh']
+before = [p.read_bytes() for p in configs]
+run('--desinstalar')
+assert [p.read_bytes() for p in configs] == before
+PY
 rm -rf "$T"; echo "OK instalar-hooks"

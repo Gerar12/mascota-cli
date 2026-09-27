@@ -14,6 +14,19 @@ Codex solo ejecuta hooks confiables: la primera vez, abre `codex` y aprueba los 
 
 Desde el menú de la barra: mostrar/ocultar, sesiones activas, mascota de cada CLI y «Abrir al iniciar sesión».
 
+## Voz (opcional)
+
+Mascota puede leer en voz alta cada respuesta de Claude o Codex:
+
+```sh
+python3 scripts/instalar-hooks.py --voz
+```
+
+- Voces, en orden: **ElevenLabs**, **edge-tts** (gratis: `uv tool install edge-tts`) y **say** (local, sin internet). Desde el menú de la mascota eliges con cuál empezar; si falla, baja a la siguiente.
+- ElevenLabs usa la clave de la variable `ELEVENLABS_API_KEY` o de `~/.mascota/voz/elevenlabs.key` (permisos 600; nunca va al repo).
+- Desde el menú: leer respuestas sí/no, elegir voz, repetir lo último y callar ahora. En la terminal: `~/.mascota/voz/bin/callar.sh` y `repetir.sh`.
+- Los datos viven en `~/.mascota/voz/`: `OFF`, `proveedor`, la cola, los últimos audios y `voz.log`.
+
 ## Desinstalar
 
 ```sh

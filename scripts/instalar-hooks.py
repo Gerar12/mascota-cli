@@ -28,6 +28,46 @@ def es_nuestro(hook, destino, cli):
         return False
 
 
+def es_voz(hook, cli):
+    try:
+        partes = shlex.split(hook.get('command', ''))
+        return (hook.get('type') == 'command' and len(partes) == 3
+                and partes[0] == '/bin/sh' and partes[2] == cli
+                and Path(partes[1]).name == 'leer.sh'
+                and Path(partes[1]).parent.name == 'bin')
+    except ValueError:
+        return False
+
+
+def actualizar_voz(cfg, cli, bin_voz, quitar):
+    hooks = cfg.get('hooks', {})
+    nuevo = {'type': 'command',
+             'command': f'/bin/sh {shlex.quote(str(bin_voz / "leer.sh"))} {cli}',
+             'timeout': 10}
+    if cli == 'claude':
+        nuevo['async'] = True
+    grupos = []
+    agregado = False
+    for grupo in hooks.get('Stop', []):
+        restantes = []
+        for hook in grupo.get('hooks', []):
+            if not es_voz(hook, cli):
+                restantes.append(hook)
+            elif not quitar and not agregado:
+                restantes.append(nuevo)
+                agregado = True
+        if restantes == grupo.get('hooks', []):
+            grupos.append(grupo)
+        elif restantes:
+            grupos.append(dict(grupo, hooks=restantes))
+    if not quitar and not agregado:
+        grupos.append({'hooks': [nuevo]})
+    if grupos:
+        cfg.setdefault('hooks', {})['Stop'] = grupos
+    else:
+        hooks.pop('Stop', None)
+
+
 def actualizar(cfg, cli, destino, quitar):
     if quitar and 'hooks' not in cfg:
         return
@@ -85,8 +125,12 @@ def main():
     p.add_argument('--codex', default='~/.codex/hooks.json')
     p.add_argument('--destino-hook', default='~/.mascota/pet-hook.sh')
     p.add_argument('--desinstalar', action='store_true')
+    p.add_argument('--voz', action='store_true', help='instalar también los hooks de voz')
+    p.add_argument('--destino-voz', default='~/.mascota/voz/bin',
+                   help='directorio bin para los scripts de voz')
     a = p.parse_args()
     destino = Path(a.destino_hook).expanduser().absolute()
+    bin_voz = Path(a.destino_voz).expanduser().absolute()
     cambios = []
     # Leer ambos archivos antes de modificar cualquiera.
     for cli in EVENTOS:
@@ -96,12 +140,21 @@ def main():
         cfg = json.loads(ruta.read_text(encoding='utf-8')) if ruta.exists() else {}
         anterior = json.dumps(cfg)
         actualizar(cfg, cli, destino, a.desinstalar)
+        if a.voz or a.desinstalar:
+            actualizar_voz(cfg, cli, bin_voz, a.desinstalar)
         if json.dumps(cfg) != anterior:
             cambios.append((ruta, cfg))
     if not a.desinstalar:
         destino.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(RAIZ / 'hooks' / 'pet-hook.sh', destino)
         destino.chmod(destino.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+        if a.voz:
+            bin_voz.mkdir(parents=True, exist_ok=True)
+            for origen in (RAIZ / 'voz').iterdir():
+                if origen.is_file():
+                    script = bin_voz / origen.name
+                    shutil.copy2(origen, script)
+                    script.chmod(script.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
     for ruta, cfg in cambios:
         guardar(ruta, cfg)
     print('Hooks de Mascota ' + ('quitados' if a.desinstalar else 'instalados'))
