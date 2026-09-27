@@ -13,13 +13,22 @@ final class Avisador: NSObject, UNUserNotificationCenterDelegate, @unchecked Sen
         centro.requestAuthorization(options: [.alert]) { _, _ in }
     }
 
-    func avisar(_ s: Sesion) {
+    func avisar(_ s: Sesion, imagen: CGImage? = nil) {
         let contenido = UNMutableNotificationContent()
         contenido.title = "\(s.nombreCLI) necesita tu permiso"
         contenido.body = "\(s.project) · clic para ir a su terminal"
         let clave = "\(s.cli)-\(s.session)"
         contenido.userInfo = ["clave": clave]
+        if let imagen, let adjunto = Self.adjunto(imagen, nombre: clave) { contenido.attachments = [adjunto] }
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: clave, content: contenido, trigger: nil))
+    }
+
+    /// La mascota pidiendo permiso, como imagen de la notificación (macOS la copia a su almacén).
+    private static func adjunto(_ imagen: CGImage, nombre: String) -> UNNotificationAttachment? {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("mascota-\(nombre)-\(UUID().uuidString).png")
+        let rep = NSBitmapImageRep(cgImage: imagen)
+        guard let png = rep.representation(using: .png, properties: [:]), (try? png.write(to: url)) != nil else { return nil }
+        return try? UNNotificationAttachment(identifier: "mascota", url: url)
     }
 
     /// Ya no espera permiso: quita su notificación.

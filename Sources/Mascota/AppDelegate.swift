@@ -218,7 +218,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         avisadas = esperando
         let enTerminal = NSWorkspace.shared.frontmostApplication?.bundleIdentifier == "com.mitchellh.ghostty"
         guard !noMolestar, !enTerminal else { return }
-        nuevas.forEach(avisador.avisar)
+        let pose = hoja()?.celda(fila: Animaciones.waiting.fila, columna: 0)   // pidiendo permiso
+        for s in nuevas { avisador.avisar(s, imagen: pose) }
     }
 
     private static func segundosInactivo() -> TimeInterval {
