@@ -28,11 +28,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if (try? ps.run()) != nil {
             let texto = String(decoding: salida.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
             ps.waitUntilExit()
-            abierto = texto.split(separator: "\n").contains { linea in
-                let partes = linea.split(separator: " ", maxSplits: 1)
-                guard partes.count == 2, partes[0] != "??" else { return false }
-                return partes[1] == "codex" || partes[1].hasSuffix("/codex")
-            }
+            abierto = Procesos.hayCodexConTerminal(salidaPs: texto)
         }
         ultimoCodex = (ahora, abierto)
         return abierto
