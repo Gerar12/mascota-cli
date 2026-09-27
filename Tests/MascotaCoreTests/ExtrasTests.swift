@@ -78,3 +78,14 @@ import Testing
     #expect(c.titulo == "Claude · 5 % (5 h) · 20 % semana")
     #expect(Cuota.leerClaude(Data("{}".utf8)) == nil)
 }
+
+@Test func detectaQueCodexNoAvisa() {
+    let t = Date(timeIntervalSince1970: 1_790_000_000)
+    // Codex escribió en su registro 5 min después del último aviso, con una terminal abierta: está callado.
+    #expect(Diagnostico.codexCallado(ultimoRegistro: t, ultimoAviso: t.addingTimeInterval(-300), codexAbierto: true))
+    #expect(Diagnostico.codexCallado(ultimoRegistro: t, ultimoAviso: nil, codexAbierto: true))
+    // Aviso reciente, sin terminal de Codex o sin registros: todo bien.
+    #expect(Diagnostico.codexCallado(ultimoRegistro: t, ultimoAviso: t.addingTimeInterval(-60), codexAbierto: true) == false)
+    #expect(Diagnostico.codexCallado(ultimoRegistro: t, ultimoAviso: nil, codexAbierto: false) == false)
+    #expect(Diagnostico.codexCallado(ultimoRegistro: nil, ultimoAviso: nil, codexAbierto: true) == false)
+}

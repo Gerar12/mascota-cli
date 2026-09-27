@@ -152,3 +152,18 @@ public enum Saludo {
         inactivoAntes >= ausencia && inactivoAhora < 2
     }
 }
+
+// MARK: Autodiagnóstico
+
+public enum Diagnostico {
+    /// Margen entre lo que escribe Codex en su registro y el último aviso que llegó a la mascota.
+    public static let margen: TimeInterval = 120
+
+    /// Codex está trabajando (escribe en su registro, con una terminal abierta) pero sus hooks no avisan
+    /// a la mascota: se actualizó y cambió algo, o pide volver a aprobar los hooks.
+    public static func codexCallado(ultimoRegistro: Date?, ultimoAviso: Date?, codexAbierto: Bool) -> Bool {
+        guard codexAbierto, let registro = ultimoRegistro else { return false }
+        guard let aviso = ultimoAviso else { return true }
+        return registro.timeIntervalSince(aviso) > margen
+    }
+}

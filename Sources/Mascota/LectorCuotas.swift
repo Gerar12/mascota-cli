@@ -12,6 +12,17 @@ enum LectorCuotas {
     }
 
     static func codex() -> CuotaCodex? {
+        for (u, _) in registrosCodex().prefix(5) {
+            if let c = Cuota.leer(final(de: u)) { return c }
+        }
+        return nil
+    }
+
+    /// Cuándo escribió Codex por última vez en sus registros de conversación (para el autodiagnóstico).
+    static func ultimoRegistroCodex() -> Date? { registrosCodex().first?.1 }
+
+    /// Registros de sesión de Codex de los últimos días, del más reciente al más viejo.
+    private static func registrosCodex() -> [(URL, Date)] {
         let fm = FileManager.default
         let base = casa.appendingPathComponent(".codex/sessions")
         let f = DateFormatter()
@@ -26,10 +37,7 @@ enum LectorCuotas {
             }
             if archivos.count >= 5 { break }
         }
-        for (u, _) in archivos.sorted(by: { $0.1 > $1.1 }).prefix(5) {
-            if let c = Cuota.leer(final(de: u)) { return c }
-        }
-        return nil
+        return archivos.sorted { $0.1 > $1.1 }
     }
 
     /// Últimos 256 KB de un archivo (los registros pueden ser grandes).

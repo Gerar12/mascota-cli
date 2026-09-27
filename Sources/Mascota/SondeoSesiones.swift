@@ -7,6 +7,17 @@ final class SondeoSesiones {
     private(set) var sesiones: [Sesion] = []
     private let dir: URL
     private var ultimoPs = (cuando: Date.distantPast, codex: false)
+    private var ultimaRevision = Date.distantPast
+
+    /// Autodiagnóstico: Codex trabaja (escribe en sus registros, con una terminal abierta) pero sus
+    /// hooks no avisan a la mascota. Se revisa cada minuto.
+    private(set) var codexCallado = false
+
+    /// Último aviso de Codex que llegó (se guarda: los archivos de estado se borran al cerrar la sesión).
+    private var ultimoAvisoCodex: Date? {
+        get { UserDefaults.standard.object(forKey: "diagnostico.ultimoAvisoCodex") as? Date }
+        set { UserDefaults.standard.set(newValue, forKey: "diagnostico.ultimoAvisoCodex") }
+    }
 
     init(raiz: URL) { dir = raiz.appendingPathComponent("estado") }
 
@@ -20,6 +31,15 @@ final class SondeoSesiones {
             try? FileManager.default.removeItem(at: dir.appendingPathComponent("\(s.cli)-\(s.session).json"))
         }
         sesiones = vivas
+        if let ts = vivas.filter({ $0.cli == "codex" }).map(\.ts).max() {
+            let aviso = Date(timeIntervalSince1970: ts)
+            if aviso > (ultimoAvisoCodex ?? .distantPast) { ultimoAvisoCodex = aviso }
+        }
+        if ahora.timeIntervalSince(ultimaRevision) >= 60 {
+            ultimaRevision = ahora
+            codexCallado = Diagnostico.codexCallado(ultimoRegistro: LectorCuotas.ultimoRegistroCodex(),
+                                                    ultimoAviso: ultimoAvisoCodex, codexAbierto: codexAbierto(ahora))
+        }
     }
 
     /// ¿Hay alguna terminal con Codex? (proceso `codex` con terminal; el servicio de fondo no tiene).

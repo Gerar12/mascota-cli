@@ -37,3 +37,9 @@ import Testing
     #expect(auto.auto == true)
     #expect(Agregador.delUsuario([auto, mia]) == [mia])
 }
+
+@Test func leeTtyYTerminal() throws {
+    let json = #"{"cli":"claude","session":"a","project":"p","state":"running","ts":1,"tty":"ttys003","terminal":"Apple_Terminal"}"#
+    let s = try JSONDecoder().decode(Sesion.self, from: Data(json.utf8))
+    #expect(s.tty == "ttys003" && s.terminal == "Apple_Terminal")
+}

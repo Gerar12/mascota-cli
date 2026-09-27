@@ -15,6 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let raiz = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".mascota")
     private lazy var sondeo = SondeoSesiones(raiz: raiz)
     var sesiones: [Sesion] { sondeo.sesiones }
+    var codexCallado: Bool { sondeo.codexCallado }
 
     private var hojas: [String: HojaSprites] = [:]
     private var ultimaFirma = ""

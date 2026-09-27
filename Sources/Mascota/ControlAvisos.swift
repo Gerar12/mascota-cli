@@ -37,7 +37,8 @@ final class ControlAvisos {
         let (nuevas, esperando) = Avisos.permisosNuevos(sesiones, yaAvisadas: avisadas)
         avisador.retirar(Array(avisadas.subtracting(esperando)))
         avisadas = esperando
-        let enTerminal = NSWorkspace.shared.frontmostApplication?.bundleIdentifier == "com.mitchellh.ghostty"
+        let terminales: Set = ["com.mitchellh.ghostty", "com.apple.Terminal", "com.googlecode.iterm2"]
+        let enTerminal = terminales.contains(NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "")
         guard !noMolestar, !enTerminal else { return }
         for s in nuevas { avisador.avisar(s, imagen: pose) }
     }

@@ -34,6 +34,16 @@ final class MenuMascota: NSObject, NSMenuDelegate {
         hora.dateFormat = "HH:mm"
 
         // ── De un vistazo ──
+        // Autodiagnóstico: Codex trabaja pero no avisa (se actualizó o pide aprobar los hooks de nuevo).
+        if app.codexCallado {
+            let aviso = accion("Codex no está avisando a la mascota", #selector(nada), icono: "exclamationmark.triangle")
+            if #available(macOS 14.4, *) {
+                aviso.subtitle = "Abre codex y aprueba los hooks (Trust all); si sigue, revisa el README"
+            }
+            aviso.toolTip = "Codex escribió en sus registros hace poco, pero sus hooks no avisaron. Suele pasar tras una actualización."
+            menu.addItem(aviso)
+            menu.addItem(.separator())
+        }
         // Sesiones: una línea fija; la lista (que puede crecer mucho) vive en el submenú.
         let sesiones = Agregador.delUsuario(Agregador.vigentes(app.sesiones, ahora: ahora))
             .sorted { ($0.cli, $1.ts) < ($1.cli, $0.ts) }
