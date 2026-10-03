@@ -63,16 +63,19 @@ final class MenuMascota: NSObject, NSMenuDelegate {
         let claude = LectorCuotas.claude(), codex = LectorCuotas.codex()
         var partes: [String] = []
         var detalle: [NSMenuItem] = []
-        if let c = claude {
+        if let leida = claude {
+            let c = leida.alDia(ahora)
+            let verbo = { (v: VentanaCuota) in v.reinicioPasado(ahora) ? "se reinició" : "se reinicia" }
             partes.append("Claude \(Int(c.cincoHoras.porcentaje.rounded())) %")
             detalle.append(linea("Claude · \(Int(c.cincoHoras.porcentaje.rounded())) % de 5 h",
-                                 "se reinicia a las \(hora.string(from: c.cincoHoras.reinicio))"))
+                                 "\(verbo(c.cincoHoras)) a las \(hora.string(from: c.cincoHoras.reinicio))"))
             detalle.append(linea("Claude · \(Int(c.semana.porcentaje.rounded())) % de la semana",
-                                 "se reinicia el \(Cuota.fechaCorta(c.semana.reinicio))"))
+                                 "\(verbo(c.semana)) el \(Cuota.fechaCorta(c.semana.reinicio))"))
         }
-        if let x = codex {
+        if let leida = codex {
+            let x = leida.alDia(ahora)
             partes.append("Codex \(Int(x.porcentaje.rounded())) %")
-            detalle.append(linea(x.titulo, x.detalle().replacingOccurrences(of: "Se reinicia", with: "se reinicia")))
+            detalle.append(linea(x.titulo, x.detalle(ahora: ahora).replacingOccurrences(of: "Se reinici", with: "se reinici")))
         }
         if !partes.isEmpty {
             menu.addItem(submenu("Cuota · " + partes.joined(separator: " · "), icono: "gauge.with.dots.needle.33percent", detalle))

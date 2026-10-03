@@ -8,8 +8,13 @@ public struct CuotaCodex: Equatable, Sendable {
 
     public var titulo: String { "Codex · \(Int(porcentaje.rounded())) % de la semana" }
 
-    public func detalle(calendario: Calendar = .current, locale: Locale = Locale(identifier: "es_MX")) -> String {
-        "Se reinicia el " + Cuota.fechaCorta(reinicio, calendario: calendario, locale: locale)
+    public func detalle(ahora: Date = Date(), calendario: Calendar = .current, locale: Locale = Locale(identifier: "es_MX")) -> String {
+        (ahora < reinicio ? "Se reinicia el " : "Se reinició el ") + Cuota.fechaCorta(reinicio, calendario: calendario, locale: locale)
+    }
+
+    /// El registro solo se actualiza cuando Codex corre: pasada la hora del reinicio, el uso ya es 0 %.
+    public func alDia(_ ahora: Date = Date()) -> CuotaCodex {
+        ahora < reinicio ? self : CuotaCodex(porcentaje: 0, reinicio: reinicio)
     }
 }
 
@@ -53,6 +58,18 @@ public enum Cuota {
 public struct VentanaCuota: Equatable, Sendable {
     public let porcentaje: Double
     public let reinicio: Date
+
+    public init(porcentaje: Double, reinicio: Date) {
+        self.porcentaje = porcentaje
+        self.reinicio = reinicio
+    }
+
+    /// La barra de estado solo se escribe cuando Claude Code corre: pasada la hora del reinicio, el uso ya es 0 %.
+    public func alDia(_ ahora: Date = Date()) -> VentanaCuota {
+        ahora < reinicio ? self : VentanaCuota(porcentaje: 0, reinicio: reinicio)
+    }
+
+    public func reinicioPasado(_ ahora: Date = Date()) -> Bool { ahora >= reinicio }
 }
 
 public struct CuotaClaude: Equatable, Sendable {
@@ -79,6 +96,12 @@ extension Cuota {
             VentanaCuota(porcentaje: w.used_percentage, reinicio: Date(timeIntervalSince1970: w.resets_at))
         }
         return CuotaClaude(cincoHoras: v(cinco), semana: v(semana))
+    }
+}
+
+extension CuotaClaude {
+    public func alDia(_ ahora: Date = Date()) -> CuotaClaude {
+        CuotaClaude(cincoHoras: cincoHoras.alDia(ahora), semana: semana.alDia(ahora))
     }
 }
 

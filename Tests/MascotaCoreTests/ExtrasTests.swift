@@ -19,7 +19,24 @@ import Testing
     cal.timeZone = TimeZone(identifier: "America/Mexico_City")!
     let c = CuotaCodex(porcentaje: 43.4, reinicio: Date(timeIntervalSince1970: 1_791_051_235))
     #expect(c.titulo == "Codex · 43 % de la semana")
-    #expect(c.detalle(calendario: cal, locale: Locale(identifier: "es_MX")).hasPrefix("Se reinicia el sáb 3"))
+    #expect(c.detalle(ahora: c.reinicio.addingTimeInterval(-60), calendario: cal, locale: Locale(identifier: "es_MX")).hasPrefix("Se reinicia el sáb 3"))
+}
+
+@Test func laCuotaVencidaSeMuestraEnCero() {
+    var cal = Calendar(identifier: .gregorian)
+    cal.timeZone = TimeZone(identifier: "America/Mexico_City")!
+    let reinicio = Date(timeIntervalSince1970: 1_791_051_235)
+    let c = CuotaCodex(porcentaje: 84, reinicio: reinicio)
+    #expect(c.alDia(reinicio.addingTimeInterval(-60)) == c)
+    let despues = reinicio.addingTimeInterval(3600)
+    #expect(c.alDia(despues).titulo == "Codex · 0 % de la semana")
+    #expect(c.detalle(ahora: despues, calendario: cal, locale: Locale(identifier: "es_MX")).hasPrefix("Se reinició el sáb 3"))
+
+    let claude = CuotaClaude(cincoHoras: VentanaCuota(porcentaje: 40, reinicio: reinicio),
+                             semana: VentanaCuota(porcentaje: 6, reinicio: reinicio.addingTimeInterval(86_400)))
+    let alDia = claude.alDia(despues)
+    #expect(alDia.cincoHoras.porcentaje == 0)
+    #expect(alDia.semana.porcentaje == 6)
 }
 
 @Test func hastaCuandoNoMolestar() {
